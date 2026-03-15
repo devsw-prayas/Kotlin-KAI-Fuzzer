@@ -1,12 +1,14 @@
 package io.kai.builders;
 
 import io.kai.contracts.*;
+import io.kai.contracts.capability.IBranchContainer;
+import io.kai.contracts.capability.ILocalScopeBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BranchBuilder implements ILocalScopeBuilder {
+public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILocalScopeBuilder> {
 
     private final String id;
     private final NameRegistry registry;
@@ -101,8 +103,68 @@ public class BranchBuilder implements ILocalScopeBuilder {
         return new BranchBuilder(registry, id, condition, newThen, newElse);
     }
 
+
     // Getters for mutation policies
     public ExpressionBuilder getCondition() { return condition; }
     public List<ILocalScopeBuilder> getThenBranch() { return thenBranch; }
     public List<ILocalScopeBuilder> getElseBranch() { return elseBranch; }
+
+    @Override
+    public boolean addChild(ILocalScopeBuilder builder, int branch) {
+        if(builder == null) return false;
+        return switch (branch) {
+            case 0 -> {
+                thenBranch.add(builder);
+                yield true;
+            }
+            case 1 -> {
+                elseBranch.add(builder);
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    @Override
+    public int branchLength() {
+        return 2;
+    }
+
+
+    @Override
+    public boolean addChildren(List<ILocalScopeBuilder> children, int branch) {
+        if(children.isEmpty() || branch > branchLength() || branch < 0) return false;
+        switch (branch){
+            case 0 -> {
+                thenBranch.addAll(children);
+                return true;
+            }
+            case 1 -> {
+                elseBranch.addAll(children);
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    @Override
+    public void clear(int branch) {
+        if(!(branch < 0 || branch > branchLength())) {
+            switch (branch){
+                case 0 -> thenBranch.clear();
+                case 1 -> elseBranch.clear();
+            }
+        }
+    }
+
+    @Override
+    public List<ILocalScopeBuilder> getBranch(int branch) {
+        return switch (branch){
+            case 0 ->  thenBranch;
+            case 1 -> elseBranch;
+            default ->  List.of();
+        };
+    }
 }

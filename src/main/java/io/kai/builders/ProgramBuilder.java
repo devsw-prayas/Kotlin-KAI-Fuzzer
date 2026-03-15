@@ -1,12 +1,14 @@
 package io.kai.builders;
 
 import io.kai.contracts.*;
+import io.kai.contracts.capability.IContainer;
+import io.kai.contracts.capability.ITopLevelBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ProgramBuilder implements IBuilder {
+public class ProgramBuilder implements IBuilder, IContainer<ITopLevelBuilder> {
     private List<ITopLevelBuilder> builders = new ArrayList<>();
     private final String id;
     private final NameRegistry registry;
@@ -53,5 +55,22 @@ public class ProgramBuilder implements IBuilder {
         ArrayList<ITopLevelBuilder> list = new ArrayList<>(builders);
         list.remove(builder);
         return new ProgramBuilder(registry, list, id);
+    }
+
+    @Override
+    public boolean addChild(ITopLevelBuilder builder) {
+        if(builder == null) return false;
+        return builders.add(builder);
+    }
+
+    @Override
+    public boolean addChildren(List<ITopLevelBuilder> children) {
+        if(children.isEmpty()) return false;
+        return builders.addAll(children);
+    }
+
+    @Override
+    public void clear() {
+        builders.clear();
     }
 }

@@ -1,6 +1,7 @@
 package io.kai.builders;
 
 import io.kai.contracts.*;
+import io.kai.contracts.capability.ILocalScopeBuilder;
 
 import java.util.List;
 

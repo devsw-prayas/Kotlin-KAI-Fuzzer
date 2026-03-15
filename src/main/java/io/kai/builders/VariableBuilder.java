@@ -1,6 +1,9 @@
 package io.kai.builders;
 
 import io.kai.contracts.*;
+import io.kai.contracts.capability.ILocalScopeBuilder;
+import io.kai.contracts.capability.IMemberBuilder;
+import io.kai.contracts.capability.ITopLevelBuilder;
 
 import java.util.List;
 
@@ -11,23 +14,26 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     private final boolean isMutable;
     private final String type;               // hardcoded "Int" for MVP
     private final ExpressionBuilder initializer;
+    private final boolean nullable;
 
-    public VariableBuilder(NameRegistry registry, boolean isMutable, ExpressionBuilder initializer) {
+    public VariableBuilder(NameRegistry registry, boolean isMutable, ExpressionBuilder initializer, boolean nullable) {
         this.registry = registry;
         this.id = registry.next("var");
         this.isMutable = isMutable;
         this.type = "Int";
         this.initializer = initializer;
+        this.nullable = nullable;
     }
 
     // Private constructor for withoutChild
     private VariableBuilder(NameRegistry registry, String id, boolean isMutable,
-                            String type, ExpressionBuilder initializer) {
+                            String type, ExpressionBuilder initializer, boolean nullable) {
         this.registry = registry;
         this.id = id;
         this.isMutable = isMutable;
         this.type = type;
         this.initializer = initializer;
+        this.nullable = nullable;
     }
 
     @Override
@@ -39,7 +45,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     public String build(BuildContext ctx) {
         String keyword = isMutable ? "var" : "val";
         String indent = indent(ctx.indentLevel());
-        return indent + keyword + " " + id + ": " + type + " = " + initializer.build(ctx);
+        return indent + keyword + " " + id + ": " + type + (nullable ? "?": "") +" = " + initializer.build(ctx);
     }
 
     @Override
@@ -59,7 +65,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
         if (builder.equals(initializer)) {
             ExpressionBuilder defaultExpr = new ExpressionBuilder(
                     registry, ExpressionBuilder.ExpressionType.INT_LITERAL, "0");
-            return new VariableBuilder(registry, id, isMutable, type, defaultExpr);
+            return new VariableBuilder(registry, id, isMutable, type, defaultExpr, nullable);
         }
         return this;
     }
