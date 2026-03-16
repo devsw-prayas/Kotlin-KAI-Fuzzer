@@ -167,4 +167,9 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
             default ->  List.of();
         };
     }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
+    }
 }

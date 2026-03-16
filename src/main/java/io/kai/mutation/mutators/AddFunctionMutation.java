@@ -28,7 +28,7 @@ public class AddFunctionMutation implements IMutationPolicy {
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        FunctionBuilder newFunc = new FunctionBuilder(ctx.registry());
+        FunctionBuilder newFunc = new FunctionBuilder(builder.getRegistry());
         if(builder instanceof IContainer<?> container){
             container.addChildRaw(newFunc);
         }

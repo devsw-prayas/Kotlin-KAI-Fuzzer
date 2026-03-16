@@ -89,4 +89,9 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     public void clearParams() {
         genParams.clear();
     }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
+    }
 }

@@ -27,9 +27,9 @@ public class AddVariableMutation implements IMutationPolicy {
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        ExpressionBuilder exp = new ExpressionBuilder(ctx.registry(),
+        ExpressionBuilder exp = new ExpressionBuilder(builder.getRegistry(),
                 ExpressionBuilder.ExpressionType.INT_LITERAL, String.valueOf(ctx.rng().nextInt(100)));
-        VariableBuilder newVar = new VariableBuilder(ctx.registry(), true /*for now*/, exp);
+        VariableBuilder newVar = new VariableBuilder(builder.getRegistry(), true, exp, true);
 
         if(builder instanceof IBranchContainer<?> bc){
             int branch = ctx.rng().nextInt(bc.branchLength());

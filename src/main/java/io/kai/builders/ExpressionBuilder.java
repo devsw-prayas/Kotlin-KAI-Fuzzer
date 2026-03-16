@@ -109,4 +109,9 @@ public class ExpressionBuilder implements ILocalScopeBuilder {
     public String getValue() { return value; }
     public ExpressionBuilder getLeft() { return left; }
     public ExpressionBuilder getRight() { return right; }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
+    }
 }

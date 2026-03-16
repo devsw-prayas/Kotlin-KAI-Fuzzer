@@ -45,16 +45,16 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
 
     @Override
     public String build(BuildContext ctx) {
-        String s = "{\n" +  builders.stream().map((child) -> indent(ctx.indentLevel() + 1) +
-                child.build(new BuildContext(ctx.indentLevel() + 1,
-                        ctx.nameRegistry(), ctx.typeScope()))).collect(Collectors.joining("\n")) + "\n}";
-        String cond = condition.build(new BuildContext(ctx.indentLevel() + 1,
-                ctx.nameRegistry(), ctx.typeScope()));
-        s = switch (type) {
-            case FOR_EACH -> "for(" + "i in 0..10" + ")" + s;
-            case WHILE -> "while(" + cond + ")" + s;
+        String indent = indent(ctx.indentLevel());
+        String body = builders.stream()
+                .map(child -> indent(ctx.indentLevel() + 1) +
+                        child.build(new BuildContext(ctx.indentLevel() + 1, ctx.nameRegistry(), ctx.typeScope())))
+                .collect(Collectors.joining("\n"));
+        String cond = condition.build(ctx);
+        return switch (type) {
+            case FOR_EACH -> indent + "for(i in 0..10) {\n" + body + "\n" + indent + "}";
+            case WHILE    -> indent + "while(" + cond + ") {\n" + body + "\n" + indent + "}";
         };
-        return s;
     }
 
     @Override
@@ -92,5 +92,10 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
     @Override
     public void clear() {
         builders.clear();
+    }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
     }
 }

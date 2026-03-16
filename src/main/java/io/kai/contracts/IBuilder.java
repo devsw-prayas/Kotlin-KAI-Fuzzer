@@ -9,6 +9,9 @@ public interface IBuilder {
     void accept(IBuilderVisitor visitor);
     IBuilder withoutChild(IBuilder builder);
     default String indent(int level) {
-        return "    ".repeat(level);
+        return " ".repeat(level);
+    }
+    default NameRegistry getRegistry() {
+        return null;
     }
 }

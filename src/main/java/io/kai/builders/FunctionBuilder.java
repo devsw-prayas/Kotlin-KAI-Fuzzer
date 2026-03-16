@@ -36,10 +36,12 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
 
     @Override
     public String build(BuildContext ctx) {
-        return "fun " + id +  getTypeParams() +"() {\n " + builders.stream()
-                .map((child) -> indent(ctx.indentLevel() + 1) +
+        String indent = indent(ctx.indentLevel());
+        String body = builders.stream()
+                .map(child -> indent(ctx.indentLevel() + 1) +
                         child.build(new BuildContext(ctx.indentLevel() + 1, ctx.nameRegistry(), ctx.typeScope())))
-                .collect(Collectors.joining("\n")) + "\n}";
+                .collect(Collectors.joining("\n"));
+        return indent + "fun " + buildTypeParams() + id + "() {\n" + body + "\n" + indent + "}";
     }
 
     @Override
@@ -98,5 +100,10 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     @Override
     public void clearParams() {
         genParams.clear();
+    }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
     }
 }

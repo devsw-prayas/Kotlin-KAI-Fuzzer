@@ -73,4 +73,9 @@ public class ProgramBuilder implements IBuilder, IContainer<ITopLevelBuilder> {
     public void clear() {
         builders.clear();
     }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
+    }
 }

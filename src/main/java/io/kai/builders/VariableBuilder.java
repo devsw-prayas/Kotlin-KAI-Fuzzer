@@ -74,4 +74,9 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     public boolean isMutable() { return isMutable; }
     public String getType() { return type; }
     public ExpressionBuilder getInitializer() { return initializer; }
+
+    @Override
+    public NameRegistry getRegistry() {
+        return registry;
+    }
 }

@@ -34,7 +34,7 @@ public class InjectNullCheckMutation implements IMutationPolicy {
                 "null"
         );
         VariableBuilder nullVar = new VariableBuilder(
-                ctx.registry(), false, nullExpr, true // nullable = true
+                builder.getRegistry(), false, nullExpr, true // nullable = true
         );
 
         if (builder instanceof IBranchContainer<?> bc) {
