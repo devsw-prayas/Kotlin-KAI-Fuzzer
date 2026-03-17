@@ -8,20 +8,18 @@ import io.kai.compiler.coverage.NoOpCoverageCollector;
 import io.kai.compiler.oracles.CompositeOracle;
 import io.kai.compiler.oracles.CrashOracle;
 import io.kai.compiler.oracles.IceOracle;
-import io.kai.contracts.NameRegistry;
 import io.kai.corpus.ICorpusManager;
 import io.kai.corpus.SimpleCorpusManager;
 import io.kai.fuzzer.FuzzerConfig;
 import io.kai.fuzzer.FuzzerContext;
 import io.kai.fuzzer.FuzzerEngine;
+import io.kai.fuzzer.FuzzerRuntime;
 import io.kai.llm.ILLMProvider;
 import io.kai.llm.NoOpLLMProvider;
 import io.kai.minimize.IMinimizer;
 import io.kai.minimize.NoOpMinimizer;
-import io.kai.mutation.MutationRegistry;
 import io.kai.mutation.MutationStats;
 import io.kai.mutation.chain.MutationChainBuilder;
-import io.kai.mutation.mutators.*;
 import io.kai.scheduler.IScheduler;
 import io.kai.scheduler.RandomScheduler;
 import io.kai.seed.ISeedProvider;
@@ -68,12 +66,6 @@ public class CLI implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        // --- Mutation registry ---
-        MutationRegistry mutationRegistry = new MutationRegistry();
-        registerDefaultPolicies(mutationRegistry);
-
-        // --- Core components ---
-        NameRegistry nameRegistry = new NameRegistry();
         MutationStats stats = new MutationStats();
         Random rng = new Random();
 
@@ -85,18 +77,16 @@ public class CLI implements Callable<Integer> {
         ILLMProvider llm = new NoOpLLMProvider();
 
         IOracle oracle = new CompositeOracle(List.of(new IceOracle(), new CrashOracle()));
-
         CompilerRunner runner = new CompilerRunner(kotlincPath, timeoutMs, coverage);
         ArtifactStore store = new ArtifactStore(logDir);
 
-        MutationChainBuilder chainBuilder = new MutationChainBuilder(mutationRegistry, maxDepth);
-
+        MutationChainBuilder chainBuilder = new MutationChainBuilder(FuzzerRuntime.get().registry(), maxDepth);
         FuzzerConfig config = new FuzzerConfig(batchSize, maxDepth, threadCount, timeoutMs, logDir, kotlincPath);
 
         FuzzerContext ctx = new FuzzerContext(
                 config, corpus, scheduler, chainBuilder, runner,
                 oracle, coverage, minimizer, llm, store,
-                stats, seeder, mutationRegistry, nameRegistry, rng
+                stats, seeder, rng
         );
 
         System.out.println("[Kai] Starting fuzzer with " + threadCount + " thread(s)");
@@ -105,22 +95,5 @@ public class CLI implements Callable<Integer> {
 
         new FuzzerEngine(ctx).run();
         return 0;
-    }
-
-    private void registerDefaultPolicies(MutationRegistry registry) {
-        AddVariableMutation addVar = new AddVariableMutation();
-        AddLoopMutation addLoop = new AddLoopMutation();
-        AddFunctionMutation addFunc = new AddFunctionMutation();
-        GenericMutation addGeneric = new GenericMutation();
-        ExpandExpressionMutation expandExpr = new ExpandExpressionMutation();
-        InjectNullCheckMutation nullCheck = new InjectNullCheckMutation();
-
-        // Register each policy for its target node types
-        for (var targetType : addVar.targetTypes()) registry.register(targetType, addVar);
-        for (var targetType : addLoop.targetTypes()) registry.register(targetType, addLoop);
-        for (var targetType : addFunc.targetTypes()) registry.register(targetType, addFunc);
-        for (var targetType : addGeneric.targetTypes()) registry.register(targetType, addGeneric);
-        for (var targetType : expandExpr.targetTypes()) registry.register(targetType, expandExpr);
-        for (var targetType : nullCheck.targetTypes()) registry.register(targetType, nullCheck);
     }
 }

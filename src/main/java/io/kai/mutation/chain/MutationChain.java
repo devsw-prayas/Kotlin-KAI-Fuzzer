@@ -11,12 +11,6 @@ import io.kai.mutation.MutationUtility;
 import java.util.List;
 
 public record MutationChain(List<MutationStep> steps) {
-
-    /**
-     * Applies each step in the chain to the tree.
-     * For each step: find the target node, find its parent,
-     * apply the policy, swap the old node for the new one in the parent's list.
-     */
     public IBuilder applyTo(IBuilder root, MutationRegistry registry, MutationContext ctx) {
         IBuilder current = root;
 

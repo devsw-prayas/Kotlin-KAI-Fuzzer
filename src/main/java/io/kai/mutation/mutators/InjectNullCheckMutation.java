@@ -29,7 +29,7 @@ public class InjectNullCheckMutation implements IMutationPolicy {
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         ExpressionBuilder nullExpr = new ExpressionBuilder(
-                ctx.registry(),
+                builder.getRegistry(),
                 ExpressionBuilder.ExpressionType.NULL_LITERAL,
                 "null"
         );

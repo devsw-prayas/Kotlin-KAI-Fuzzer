@@ -51,12 +51,12 @@ public class FuzzerEngine {
                         new TypeScope(),
                         0,
                         ctx.stats(),
-                        new NameRegistry()
+                        ctx.seeder().getRegistry()
                 );
                 MutationChain chain = ctx.builder().build(seed, mutCtx);
 
                 // 4. Apply chain -> emit source
-                IBuilder mutated = chain.applyTo(seed, ctx.mutationRegistry(), mutCtx);
+                IBuilder mutated = chain.applyTo(seed, FuzzerRuntime.get().registry(), mutCtx);
                 String source = mutated.build(BuildContext.defaultContext());
                 MutationChainLog chainLog = new MutationChainLog(
                         seed.id(),
@@ -94,7 +94,7 @@ public class FuzzerEngine {
                 // 10. Update scheduler
                 String lastPolicyId = chain.lastPolicy();
                 if (lastPolicyId != null && !lastPolicyId.isEmpty()) {
-                    ctx.mutationRegistry().policiesFor(seed)
+                    FuzzerRuntime.get().registry().policiesFor(seed)
                             .stream()
                             .filter(p -> p.id().equals(lastPolicyId))
                             .findFirst()

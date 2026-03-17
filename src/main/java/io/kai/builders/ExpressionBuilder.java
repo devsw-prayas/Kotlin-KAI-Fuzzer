@@ -63,9 +63,8 @@ public class ExpressionBuilder implements ILocalScopeBuilder {
     @Override
     public String build(BuildContext ctx) {
         return switch (type) {
-            case INT_LITERAL    -> value;
+            case INT_LITERAL, BOOL_LITERAL -> value;
             case STRING_LITERAL -> "\"" + value + "\"";
-            case BOOL_LITERAL   -> value;
             case NULL_LITERAL   -> "null";
             case FUNCTION_CALL  -> value + "()";
             case BINARY_OP      -> "(" + left.build(ctx) + " " + value + " " + right.build(ctx) + ")";
