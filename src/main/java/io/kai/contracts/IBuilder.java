@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface IBuilder {
     String id();
-    String build(BuildContext ctx);
+    String build(int indentLevel);
     List<? extends IBuilder> children();
     void accept(IBuilderVisitor visitor);
     IBuilder withoutChild(IBuilder builder);

@@ -2,6 +2,7 @@ package io.kai.builders;
 
 import io.kai.contracts.*;
 import io.kai.contracts.capability.IContainer;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.contracts.capability.ILocalScopeBuilder;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
     private final NameRegistry registry;
     private final String id;
     private final List<ILocalScopeBuilder> builders;
-    private final ExpressionBuilder condition;
+    private final IExpressionBuilder condition;
 
     public enum LoopType{
         FOR_EACH,
@@ -21,7 +22,7 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
 
     private final LoopType type;
 
-    private LoopBuilder(NameRegistry registry, String id, ExpressionBuilder condition,LoopType type, List<ILocalScopeBuilder> builders){
+    private LoopBuilder(NameRegistry registry, String id, IExpressionBuilder condition,LoopType type, List<ILocalScopeBuilder> builders){
         this.registry = registry;
         this.id = id;
         this.condition = condition;
@@ -29,11 +30,11 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
         this.builders = builders;
     }
 
-    public LoopBuilder(NameRegistry registry, LoopType type, ExpressionBuilder condition){
+    public LoopBuilder(NameRegistry registry, LoopType type, IExpressionBuilder condition){
         this(registry, registry.next("loop"), condition, type, new ArrayList<>());
     }
 
-    public LoopBuilder(NameRegistry registry, LoopType type, ExpressionBuilder condition, List<ILocalScopeBuilder> builders){
+    public LoopBuilder(NameRegistry registry, LoopType type, IExpressionBuilder condition, List<ILocalScopeBuilder> builders){
         this(registry, registry.next("loop"), condition, type, builders);
 
     }
@@ -44,13 +45,13 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
     }
 
     @Override
-    public String build(BuildContext ctx) {
-        String indent = indent(ctx.indentLevel());
+    public String build(int indentLevel) {
+        String indent = indent(indentLevel);
         String body = builders.stream()
-                .map(child -> indent(ctx.indentLevel() + 1) +
-                        child.build(new BuildContext(ctx.indentLevel() + 1, ctx.nameRegistry(), ctx.typeScope())))
+                .map(child -> indent(indentLevel + 1) +
+                        child.build(indentLevel))
                 .collect(Collectors.joining("\n"));
-        String cond = condition.build(ctx);
+        String cond = condition.build(indentLevel);
         return switch (type) {
             case FOR_EACH -> indent + "for(i in 0..10) {\n" + body + "\n" + indent + "}";
             case WHILE    -> indent + "while(" + cond + ") {\n" + body + "\n" + indent + "}";

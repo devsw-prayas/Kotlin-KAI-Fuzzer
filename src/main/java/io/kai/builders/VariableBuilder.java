@@ -1,6 +1,8 @@
 package io.kai.builders;
 
+import io.kai.builders.expressions.IntLiteralBuilder;
 import io.kai.contracts.*;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.contracts.capability.ILocalScopeBuilder;
 import io.kai.contracts.capability.IMemberBuilder;
 import io.kai.contracts.capability.ITopLevelBuilder;
@@ -13,10 +15,10 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     private final NameRegistry registry;
     private final boolean isMutable;
     private final String type;               // hardcoded "Int" for MVP
-    private final ExpressionBuilder initializer;
+    private final IExpressionBuilder initializer;
     private final boolean nullable;
 
-    public VariableBuilder(NameRegistry registry, boolean isMutable, ExpressionBuilder initializer, boolean nullable) {
+    public VariableBuilder(NameRegistry registry, boolean isMutable, IExpressionBuilder initializer, boolean nullable) {
         this.registry = registry;
         this.id = registry.next("var");
         this.isMutable = isMutable;
@@ -27,7 +29,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
     // Private constructor for withoutChild
     private VariableBuilder(NameRegistry registry, String id, boolean isMutable,
-                            String type, ExpressionBuilder initializer, boolean nullable) {
+                            String type, IExpressionBuilder initializer, boolean nullable) {
         this.registry = registry;
         this.id = id;
         this.isMutable = isMutable;
@@ -42,10 +44,10 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     }
 
     @Override
-    public String build(BuildContext ctx) {
+    public String build(int indentLevel) {
         String keyword = isMutable ? "var" : "val";
-        String indent = indent(ctx.indentLevel());
-        return indent + keyword + " " + id + ": " + type + (nullable ? "?": "") +" = " + initializer.build(ctx);
+        String indent = indent(indentLevel);
+        return indent + keyword + " " + id + ": " + type + (nullable ? "?": "") +" = " + initializer.build(indentLevel);
     }
 
     @Override
@@ -63,8 +65,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     public IBuilder withoutChild(IBuilder builder) {
         // The initializer is the only child — if removed, replace with a default literal
         if (builder.equals(initializer)) {
-            ExpressionBuilder defaultExpr = new ExpressionBuilder(
-                    registry, ExpressionBuilder.ExpressionType.INT_LITERAL, "0");
+            IExpressionBuilder defaultExpr = new IntLiteralBuilder(registry, "200");
             return new VariableBuilder(registry, id, isMutable, type, defaultExpr, nullable);
         }
         return this;
@@ -73,7 +74,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     // Getters for mutation policies
     public boolean isMutable() { return isMutable; }
     public String getType() { return type; }
-    public ExpressionBuilder getInitializer() { return initializer; }
+    public IExpressionBuilder getInitializer() { return initializer; }
 
     @Override
     public NameRegistry getRegistry() {

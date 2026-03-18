@@ -1,9 +1,11 @@
 package io.kai.mutation.mutators;
 
 import io.kai.builders.*;
+import io.kai.builders.expressions.IntLiteralBuilder;
 import io.kai.contracts.capability.IBranchContainer;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.capability.IContainer;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
 
@@ -27,8 +29,7 @@ public class AddVariableMutation implements IMutationPolicy {
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        ExpressionBuilder exp = new ExpressionBuilder(builder.getRegistry(),
-                ExpressionBuilder.ExpressionType.INT_LITERAL, String.valueOf(ctx.rng().nextInt(100)));
+        IExpressionBuilder exp = new IntLiteralBuilder(builder.getRegistry(), "100");
         VariableBuilder newVar = new VariableBuilder(builder.getRegistry(), true, exp, true);
 
         if(builder instanceof IBranchContainer<?> bc){

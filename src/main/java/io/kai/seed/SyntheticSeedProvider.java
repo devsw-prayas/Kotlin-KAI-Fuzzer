@@ -8,7 +8,7 @@ import io.kai.mutation.MutationContext;
 import javax.naming.Name;
 
 public class SyntheticSeedProvider implements ISeedProvider{
-    private final NameRegistry registry;
+    private NameRegistry registry;
     @Override
     public NameRegistry getRegistry() {
         return registry;
@@ -20,6 +20,7 @@ public class SyntheticSeedProvider implements ISeedProvider{
 
     @Override
     public IBuilder next() {
+        registry = new NameRegistry();
         ProgramBuilder builder = new ProgramBuilder(registry);
         ClassBuilder myClass = new ClassBuilder(registry);
         FunctionBuilder myFunc = new FunctionBuilder(registry);
