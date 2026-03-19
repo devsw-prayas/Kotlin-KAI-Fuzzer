@@ -49,7 +49,8 @@ public class FuzzerEngine {
                         new ScopeContext(null),
                         0,
                         ctx.stats(),
-                        ctx.seeder().getRegistry()
+                        ctx.seeder().getRegistry(),
+                        seed
                 );
                 MutationChain chain = ctx.builder().build(seed, mutCtx);
 

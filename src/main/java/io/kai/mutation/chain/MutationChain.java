@@ -27,7 +27,7 @@ public record MutationChain(List<MutationStep> steps) {
 
             ScopeContext scope = ScopeContextBuilder.buildFor(current, target.id());
             MutationContext stepCtx = new MutationContext(
-                    ctx.rng(), scope, ctx.depth(), ctx.stats(), ctx.registry()
+                    ctx.rng(), scope, ctx.depth(), ctx.stats(), ctx.registry(), ctx.root()
             );
 
             // 4. Apply the policy — get the mutated node
