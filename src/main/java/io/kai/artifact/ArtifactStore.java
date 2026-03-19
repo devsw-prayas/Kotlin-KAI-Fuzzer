@@ -2,7 +2,6 @@ package io.kai.artifact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import io.kai.contracts.BuildContext;
 import io.kai.contracts.IBuilder;
 import io.kai.compiler.CompilerResult;
 import io.kai.compiler.OracleVerdict;
@@ -29,7 +28,7 @@ public class ArtifactStore {
             Path crashDir = outputDir.resolve(dirName);
             Files.createDirectories(crashDir);
 
-            String source = program.build(BuildContext.defaultContext());
+            String source = program.build(0);
             Files.writeString(crashDir.resolve("program.kt"), source);
 
             Files.writeString(crashDir.resolve("stderr.log"), result.stderr());

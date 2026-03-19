@@ -29,9 +29,9 @@ public class ProgramBuilder implements IBuilder, IContainer<ITopLevelBuilder> {
     }
 
     @Override
-    public String build(BuildContext ctx) {
+    public String build(int indentLevel) {
         return builders.stream()
-                .map((child) -> child.build(ctx))
+                .map((child) -> child.build(indentLevel))
                 .collect(Collectors.joining("\n"));
     }
 

@@ -3,20 +3,12 @@ package io.kai.mutation.chain;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.capability.IBranchContainer;
 import io.kai.contracts.capability.IContainer;
-import io.kai.mutation.IMutationPolicy;
-import io.kai.mutation.MutationContext;
-import io.kai.mutation.MutationRegistry;
-import io.kai.mutation.MutationUtility;
+import io.kai.mutation.*;
+import io.kai.mutation.context.ScopeContext;
 
 import java.util.List;
 
 public record MutationChain(List<MutationStep> steps) {
-
-    /**
-     * Applies each step in the chain to the tree.
-     * For each step: find the target node, find its parent,
-     * apply the policy, swap the old node for the new one in the parent's list.
-     */
     public IBuilder applyTo(IBuilder root, MutationRegistry registry, MutationContext ctx) {
         IBuilder current = root;
 
@@ -33,10 +25,15 @@ public record MutationChain(List<MutationStep> steps) {
                     .orElse(null);
             if (policy == null) continue;
 
-            // 3. Apply the policy — get the mutated node
+            ScopeContext scope = ScopeContextBuilder.buildFor(current, target.id());
+            MutationContext stepCtx = new MutationContext(
+                    ctx.rng(), scope, ctx.depth(), ctx.stats(), ctx.registry(), ctx.root()
+            );
+
+            // 4. Apply the policy — get the mutated node
             IBuilder mutated = policy.apply(target, ctx);
 
-            // 4. If the policy returned the same node (in-place mutation like addChild),
+            // 5. If the policy returned the same node (in-place mutation like addChild),
             //    nothing more to do — the list was already mutated.
             //    If it returned a NEW node (like ExpandExpressionMutation),
             //    we need to swap it into the parent.
@@ -50,7 +47,7 @@ public record MutationChain(List<MutationStep> steps) {
                 }
             }
 
-            // 5. Update stats
+            // 6. Update stats
             ctx.stats().increment(policy.id());
         }
 

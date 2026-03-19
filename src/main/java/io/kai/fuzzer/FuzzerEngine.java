@@ -1,8 +1,6 @@
 package io.kai.fuzzer;
 
-import io.kai.contracts.BuildContext;
 import io.kai.contracts.IBuilder;
-import io.kai.contracts.NameRegistry;
 import io.kai.corpus.CorpusMeta;
 import io.kai.contracts.visitor.StructuralHasher;
 import io.kai.compiler.coverage.CoverageSnapshot;
@@ -11,7 +9,7 @@ import io.kai.mutation.chain.MutationChainLog;
 import io.kai.mutation.MutationContext;
 import io.kai.compiler.CompilerResult;
 import io.kai.compiler.OracleVerdict;
-import io.kai.contracts.TypeScope;
+import io.kai.mutation.context.ScopeContext;
 
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -48,16 +46,17 @@ public class FuzzerEngine {
                 long rngSeed = ctx.rng().nextLong();
                 MutationContext mutCtx = new MutationContext(
                         new Random(rngSeed),
-                        new TypeScope(),
+                        new ScopeContext(null),
                         0,
                         ctx.stats(),
-                        new NameRegistry()
+                        ctx.seeder().getRegistry(),
+                        seed
                 );
                 MutationChain chain = ctx.builder().build(seed, mutCtx);
 
                 // 4. Apply chain -> emit source
-                IBuilder mutated = chain.applyTo(seed, ctx.mutationRegistry(), mutCtx);
-                String source = mutated.build(BuildContext.defaultContext());
+                IBuilder mutated = chain.applyTo(seed, FuzzerRuntime.get().registry(), mutCtx);
+                String source = mutated.build(0);
                 MutationChainLog chainLog = new MutationChainLog(
                         seed.id(),
                         rngSeed,
@@ -94,7 +93,7 @@ public class FuzzerEngine {
                 // 10. Update scheduler
                 String lastPolicyId = chain.lastPolicy();
                 if (lastPolicyId != null && !lastPolicyId.isEmpty()) {
-                    ctx.mutationRegistry().policiesFor(seed)
+                    FuzzerRuntime.get().registry().policiesFor(seed)
                             .stream()
                             .filter(p -> p.id().equals(lastPolicyId))
                             .findFirst()

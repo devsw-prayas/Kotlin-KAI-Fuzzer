@@ -1,7 +1,9 @@
 package io.kai.builders;
 
+import io.kai.builders.expressions.BoolLiteralBuilder;
 import io.kai.contracts.*;
 import io.kai.contracts.capability.IBranchContainer;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.contracts.capability.ILocalScopeBuilder;
 
 import java.util.ArrayList;
@@ -12,11 +14,11 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
 
     private final String id;
     private final NameRegistry registry;
-    private final ExpressionBuilder condition;
+    private final IExpressionBuilder condition;
     private final List<ILocalScopeBuilder> thenBranch;
     private final List<ILocalScopeBuilder> elseBranch;
 
-    public BranchBuilder(NameRegistry registry, ExpressionBuilder condition,
+    public BranchBuilder(NameRegistry registry, IExpressionBuilder condition,
                          List<ILocalScopeBuilder> thenBranch,
                          List<ILocalScopeBuilder> elseBranch) {
         this.registry = registry;
@@ -27,7 +29,7 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
     }
 
     // Private constructor for withoutChild
-    private BranchBuilder(NameRegistry registry, String id, ExpressionBuilder condition,
+    private BranchBuilder(NameRegistry registry, String id, IExpressionBuilder condition,
                           List<ILocalScopeBuilder> thenBranch,
                           List<ILocalScopeBuilder> elseBranch) {
         this.registry = registry;
@@ -43,20 +45,19 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
     }
 
     @Override
-    public String build(BuildContext ctx) {
-        String indent = indent(ctx.indentLevel());
-        BuildContext inner = new BuildContext(ctx.indentLevel() + 1, ctx.nameRegistry(), ctx.typeScope());
+    public String build(int indentLevel) {
+        String indent = indent(indentLevel);
 
         String thenBody = thenBranch.stream()
-                .map(c -> c.build(inner))
+                .map(c -> c.build(indentLevel))
                 .collect(Collectors.joining("\n"));
 
         String elseBody = elseBranch.stream()
-                .map(c -> c.build(inner))
+                .map(c -> c.build(indentLevel))
                 .collect(Collectors.joining("\n"));
 
         StringBuilder sb = new StringBuilder();
-        sb.append(indent).append("if (").append(condition.build(ctx)).append(") {\n");
+        sb.append(indent).append("if (").append(condition.build(indentLevel)).append(") {\n");
         if (!thenBody.isEmpty()) sb.append(thenBody).append("\n");
         sb.append(indent).append("}");
 
@@ -91,9 +92,7 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
     public IBuilder withoutChild(IBuilder builder) {
         if (builder.equals(condition)) {
             // Replace condition with a default true literal
-            ExpressionBuilder defaultCond = new ExpressionBuilder(
-                    registry, ExpressionBuilder.ExpressionType.BOOL_LITERAL, "true");
-            return new BranchBuilder(registry, id, defaultCond,
+            return new BranchBuilder(registry, id, new BoolLiteralBuilder(registry, "true"),
                     new ArrayList<>(thenBranch), new ArrayList<>(elseBranch));
         }
         ArrayList<ILocalScopeBuilder> newThen = new ArrayList<>(thenBranch);
@@ -105,7 +104,7 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
 
 
     // Getters for mutation policies
-    public ExpressionBuilder getCondition() { return condition; }
+    public IExpressionBuilder getCondition() { return condition; }
     public List<ILocalScopeBuilder> getThenBranch() { return thenBranch; }
     public List<ILocalScopeBuilder> getElseBranch() { return elseBranch; }
 

@@ -1,9 +1,11 @@
 package io.kai.mutation.mutators;
 
 import io.kai.builders.*;
+import io.kai.builders.expressions.NullLiteralBuilder;
 import io.kai.contracts.capability.IBranchContainer;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.capability.IContainer;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
 
@@ -28,11 +30,7 @@ public class InjectNullCheckMutation implements IMutationPolicy {
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        ExpressionBuilder nullExpr = new ExpressionBuilder(
-                ctx.registry(),
-                ExpressionBuilder.ExpressionType.NULL_LITERAL,
-                "null"
-        );
+        IExpressionBuilder nullExpr = new NullLiteralBuilder(builder.getRegistry());
         VariableBuilder nullVar = new VariableBuilder(
                 builder.getRegistry(), false, nullExpr, true // nullable = true
         );

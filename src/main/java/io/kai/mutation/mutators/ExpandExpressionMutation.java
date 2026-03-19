@@ -1,7 +1,8 @@
 package io.kai.mutation.mutators;
 
-import io.kai.builders.ExpressionBuilder;
+import io.kai.builders.expressions.*;
 import io.kai.contracts.IBuilder;
+import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
 
@@ -13,7 +14,7 @@ public class ExpandExpressionMutation implements IMutationPolicy {
 
     @Override
     public Set<Class<? extends IBuilder>> targetTypes() {
-        return Set.of(ExpressionBuilder.class);
+        return Set.of(IntLiteralBuilder.class, BoolLiteralBuilder.class, StringLiteralBuilder.class);
     }
 
     @Override
@@ -23,30 +24,27 @@ public class ExpandExpressionMutation implements IMutationPolicy {
 
     @Override
     public boolean compatibleWith(IBuilder builder) {
-        if (!(builder instanceof ExpressionBuilder expr)) return false;
-        return switch (expr.getType()) {
-            case INT_LITERAL, BOOL_LITERAL, STRING_LITERAL -> true;
-            default -> false;
-        };
+        return builder instanceof IntLiteralBuilder
+                || builder instanceof BoolLiteralBuilder
+                || builder instanceof StringLiteralBuilder;
     }
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        ExpressionBuilder original = (ExpressionBuilder) builder;
         String operator = OPERATORS[ctx.rng().nextInt(OPERATORS.length)];
 
-        ExpressionBuilder left = new ExpressionBuilder(
-                ctx.registry(),
-                original.getType(),
-                original.getValue()
-        );
+        IExpressionBuilder left = switch (builder) {
+            case IntLiteralBuilder b -> new IntLiteralBuilder(builder.getRegistry(), b.getValue());
+            case BoolLiteralBuilder b -> new BoolLiteralBuilder(builder.getRegistry(), b.getValue());
+            case StringLiteralBuilder b -> new StringLiteralBuilder(builder.getRegistry(), b.getValue());
+            default -> new IntLiteralBuilder(builder.getRegistry(), "0");
+        };
 
-        ExpressionBuilder right = new ExpressionBuilder(
-                ctx.registry(),
-                ExpressionBuilder.ExpressionType.INT_LITERAL,
+        IExpressionBuilder right = new IntLiteralBuilder(
+                builder.getRegistry(),
                 String.valueOf(ctx.rng().nextInt(100))
         );
 
-        return new ExpressionBuilder(ctx.registry(), operator, left, right);
+        return new BinaryOpBuilder(builder.getRegistry(), operator, left, right);
     }
 }
