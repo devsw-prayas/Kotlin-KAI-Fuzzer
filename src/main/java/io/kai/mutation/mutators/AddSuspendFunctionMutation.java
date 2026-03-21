@@ -7,6 +7,7 @@ import io.kai.contracts.IBuilder;
 import io.kai.contracts.capability.IContainer;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -16,13 +17,16 @@ public class AddSuspendFunctionMutation implements IMutationPolicy {
         return Set.of(ClassBuilder.class, ProgramBuilder.class);
     }
     @Override public String id() { return "add_suspend_function"; }
-    @Override public boolean compatibleWith(IBuilder b) {
-        return b instanceof ClassBuilder || b instanceof ProgramBuilder;
+    @Override
+    public boolean compatibleWith(IBuilder b) {
+        if (b instanceof ProgramBuilder pb)
+            return MutationUtility.countChildrenOfType(pb, FunctionBuilder.class) < 3;
+        return b instanceof ClassBuilder;
     }
     @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder fn = new FunctionBuilder(builder.getRegistry());
         fn.setSuspend(true);
-        if (builder instanceof IContainer<?> c) c.addChildRaw(fn);
+        if (builder instanceof IContainer<?> c) MutationUtility.addChildSmart(c, fn);
         return builder;
     }
 }

@@ -53,7 +53,7 @@ public class LambdaBuilder implements IExpressionBuilder, IContainer<ILocalScope
                 .collect(Collectors.joining(", "));
 
         String bodyStr = body.stream()
-                .map(s -> indent(indentLevel + 1) + s.build(indentLevel + 1))
+                .map(s -> s.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
 
         StringBuilder sb = new StringBuilder("{ ");

@@ -201,10 +201,31 @@ public final class FuzzerRuntime {
         return registry;
     }
 
-    public double builderWeight(IBuilder type) {
-        return prototypeWeights.getOrDefault(type, 0.5);
+    public double builderWeight(IBuilder node) {
+        for (Map.Entry<IBuilder, Double> entry : prototypeWeights.entrySet()) {
+            if (matches(node, entry.getKey())) return entry.getValue();
+        }
+        return 0.5;
     }
 
+    private boolean matches(IBuilder node, IBuilder prototype) {
+        if (!node.getClass().equals(prototype.getClass())) return false;
+
+        if (node instanceof FunctionBuilder fn && prototype instanceof FunctionBuilder fp) {
+            return fn.isInline() == fp.isInline()
+                    && fn.isSuspend() == fp.isSuspend()
+                    && fn.isOperator() == fp.isOperator()
+                    && fn.getTypeParams().isEmpty() == fp.getTypeParams().isEmpty();
+        }
+
+        if (node instanceof ClassBuilder cn && prototype instanceof ClassBuilder cp) {
+            return cn.isSealed() == cp.isSealed()
+                    && cn.isData() == cp.isData()
+                    && cn.getTypeParams().isEmpty() == cp.getTypeParams().isEmpty();
+        }
+
+        return true;
+    }
     public double nastiness(String policyId) {
         return mutationNastiness.getOrDefault(policyId, 0.5);
     }

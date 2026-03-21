@@ -1,6 +1,7 @@
 package io.kai.mutation;
 
 import io.kai.contracts.IBuilder;
+import io.kai.contracts.capability.IContainer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +18,11 @@ public class MutationRegistry {
         mapping.computeIfAbsent(nodeType, (n) -> new ArrayList<>()).add(policy);
     }
 
-    public List<IMutationPolicy> policiesFor(IBuilder node){
-        List<IMutationPolicy> mutators =  mapping.get(node.getClass());
-        if(mutators == null) return List.of();
-        return mutators;
+    public List<IMutationPolicy> policiesFor(IBuilder node) {
+        List<IMutationPolicy> mutators = mapping.get(node.getClass());
+        if (mutators == null) return List.of();
+        return mutators.stream()
+                .filter(p -> p.compatibleWith(node))
+                .toList();
     }
 }

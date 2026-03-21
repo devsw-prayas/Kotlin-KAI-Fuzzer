@@ -19,5 +19,6 @@ import java.util.Random;
 public record FuzzerContext(FuzzerConfig config, ICorpusManager manager, IScheduler scheduler,
                             MutationChainBuilder builder, CompilerRunner runner, IOracle oracle,
                             ICoverageCollector collector, IMinimizer minimizer, ILLMProvider llm,
-                            ArtifactStore store, MutationStats stats, ISeedProvider seeder, Random rng) {
+                            ArtifactStore store, MutationStats stats, ISeedProvider seeder, Random rng,
+                            MutationRegistry mutationRegistry) {
 }

@@ -24,7 +24,7 @@ public class SyntheticSeedProvider implements ISeedProvider{
         ClassBuilder myClass = new ClassBuilder(registry);
         FunctionBuilder myFunc = new FunctionBuilder(registry);
         IExpressionBuilder myExp = new IntLiteralBuilder(registry, "100");
-        VariableBuilder myVar = new VariableBuilder(registry, true, myExp, false);
+        VariableBuilder myVar = new VariableBuilder(registry, true, myExp, false, "Int");
         myFunc.addChild(myVar);
         myClass.addChild(myFunc);
         builder.addChild(myClass);

@@ -2,11 +2,11 @@ package io.kai.compiler;
 
 import io.kai.compiler.coverage.ICoverageCollector;
 import io.kai.mutation.chain.MutationChainLog;
-import io.kai.compiler.CompilerResult;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class CompilerRunner {
@@ -30,6 +30,16 @@ public class CompilerRunner {
         long start = System.currentTimeMillis();
         Process process = pb.start();
 
+        // Drain streams in parallel — prevents pipe buffer blocking
+        CompletableFuture<String> stdoutFuture = CompletableFuture.supplyAsync(() -> {
+            try { return new String(process.getInputStream().readAllBytes()); }
+            catch (IOException e) { return ""; }
+        });
+        CompletableFuture<String> stderrFuture = CompletableFuture.supplyAsync(() -> {
+            try { return new String(process.getErrorStream().readAllBytes()); }
+            catch (IOException e) { return ""; }
+        });
+
         boolean timedOut = false;
         try {
             timedOut = !process.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
@@ -41,11 +51,14 @@ public class CompilerRunner {
 
         long duration = System.currentTimeMillis() - start;
 
-        String stdout = new String(process.getInputStream().readAllBytes());
-        String stderr = new String(process.getErrorStream().readAllBytes());
+        // Give stream readers 5s to finish after process ends
+        String stdout = stdoutFuture.orTimeout(5, TimeUnit.SECONDS)
+                .exceptionally(e -> "").join();
+        String stderr = stderrFuture.orTimeout(5, TimeUnit.SECONDS)
+                .exceptionally(e -> "").join();
+
         int exitCode = timedOut ? -1 : process.exitValue();
 
-        // Clean up temp file
         Files.deleteIfExists(tmpFile);
 
         return new CompilerResult(exitCode, stdout, stderr, duration, timedOut, source, chainLog);

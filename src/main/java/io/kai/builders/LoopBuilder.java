@@ -48,12 +48,11 @@ public class LoopBuilder implements ILocalScopeBuilder, IContainer<ILocalScopeBu
     public String build(int indentLevel) {
         String indent = indent(indentLevel);
         String body = builders.stream()
-                .map(child -> indent(indentLevel + 1) +
-                        child.build(indentLevel))
+                .map(child -> child.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
         String cond = condition.build(indentLevel);
         return switch (type) {
-            case FOR_EACH -> indent + "for(i in 0..10) {\n" + body + "\n" + indent + "}";
+            case FOR_EACH -> indent + "for(i in " + cond + ") {\n" + body + "\n" + indent + "}";
             case WHILE    -> indent + "while(" + cond + ") {\n" + body + "\n" + indent + "}";
         };
     }

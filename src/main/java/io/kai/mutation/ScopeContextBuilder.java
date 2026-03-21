@@ -3,6 +3,7 @@ package io.kai.mutation;
 import io.kai.builders.ClassBuilder;
 import io.kai.builders.FunctionBuilder;
 import io.kai.builders.VariableBuilder;
+import io.kai.builders.expressions.LambdaBuilder;
 import io.kai.contracts.IBuilder;
 
 import io.kai.mutation.context.*;
@@ -20,54 +21,75 @@ public class ScopeContextBuilder {
 
     private static boolean walk(IBuilder node, String targetId,
                                 ScopeContext current, ScopeContext[] result) {
-        // Register this node into current scope
-        register(node, current);
+        // Determine if this node introduces a new scope level FIRST
+        ScopeContext next = introducesScope(node) ? current.enter() : current;
+
+        // Variables: walk children BEFORE registering
+        // prevents self-reference (var_5 referencing var_5 in its own initializer)
+        if (node instanceof VariableBuilder vb) {
+            if (node.id().equals(targetId)) {
+                result[0] = next;
+                return true;
+            }
+            for (IBuilder child : node.children()) {
+                if (walk(child, targetId, current, result)) return true;
+            }
+            String fullType = vb.getType() + (vb.isNullable() ? "?" : "");
+            current.valueScope().declareVar(vb.id(), fullType);
+            return false;
+        }
+
+        // Register into the correct scope
+        register(node, current, next);
 
         // Check if this is the target
         if (node.id().equals(targetId)) {
-            result[0] = current;
+            result[0] = next;
             return true;
         }
 
-        // Determine if this node introduces a new scope level
-        ScopeContext next = introducesScope(node) ? current.enter() : current;
-
-        // Walk children
+        // Walk children in the next scope
         for (IBuilder child : node.children()) {
             if (walk(child, targetId, next, result)) return true;
         }
 
         return false;
     }
-
-    private static void register(IBuilder node, ScopeContext ctx) {
+    private static void register(IBuilder node, ScopeContext current, ScopeContext next) {
         if (node instanceof FunctionBuilder fb) {
-            ctx.symbols().declareFunction(new SymbolTable.FunctionMeta(
+            // Function declared in current scope (siblings can see it)
+            current.symbols().declareFunction(new SymbolTable.FunctionMeta(
                     fb.id(),
                     new LinkedHashMap<>(fb.getTypeParams()),
                     fb.isSuspend(),
                     fb.isInline()
             ));
+            // Type params scoped to the function's own scope (next)
             for (String tp : fb.getTypeParams().keySet()) {
-                ctx.typeScope().declare(tp);
+                next.typeScope().declare(tp);
             }
         } else if (node instanceof ClassBuilder cb) {
-            ctx.symbols().declareClass(new SymbolTable.ClassMeta(
+            // Class declared in current scope
+            current.symbols().declareClass(new SymbolTable.ClassMeta(
                     cb.id(),
                     new LinkedHashMap<>(cb.getTypeParams()),
                     cb.isSealed(),
-                    cb.isData()
+                    cb.isData(),
+                    cb.isAbstract(),
+                    cb.isOpen(),
+                    cb.isObject(),
+                    cb
             ));
+            // Type params scoped to the class's own scope (next)
             for (String tp : cb.getTypeParams().keySet()) {
-                ctx.typeScope().declare(tp);
+                next.typeScope().declare(tp);
             }
-        } else if (node instanceof VariableBuilder vb) {
-            ctx.valueScope().declareVar(vb.id(), vb.getType());
         }
     }
 
     private static boolean introducesScope(IBuilder node) {
         return node instanceof FunctionBuilder
-                || node instanceof ClassBuilder;
+                || node instanceof ClassBuilder
+                || node instanceof LambdaBuilder;
     }
 }

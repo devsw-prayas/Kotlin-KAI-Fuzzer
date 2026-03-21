@@ -8,6 +8,7 @@ import io.kai.builders.expressions.NullLiteralBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 import io.kai.mutation.ScopeContextBuilder;
 import io.kai.mutation.context.SymbolTable;
 
@@ -35,7 +36,7 @@ public class AddWhenOnSealedMutation implements IMutationPolicy {
                 List.of(),
                 true
         ));
-        fn.addChild(when);
+        MutationUtility.addChildSmart(fn, when);
         return builder;
     }
 }

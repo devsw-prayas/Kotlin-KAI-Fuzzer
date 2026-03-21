@@ -8,16 +8,31 @@ import io.kai.mutation.MutationContext;
 
 import java.util.Set;
 
-// Adds: typealias Recursive_0 = List<Recursive_0>
 public class AddSelfReferentialTypeAliasMutation implements IMutationPolicy {
+
+    private static final String[][] ALIAS_TEMPLATES = {
+            {"MyList",   "List<T>"},
+            {"MyMap",    "Map<T, String>"},
+            {"MySet",    "Set<T>"},
+            {"MyPair",   "Pair<T, T>"},
+            {"Mapper",   "Function1<T, T>"},
+            {"Predicate","Function1<T, Boolean>"},
+    };
+
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(ProgramBuilder.class); }
     @Override public String id() { return "add_self_referential_typealias"; }
     @Override public boolean compatibleWith(IBuilder b) { return b instanceof ProgramBuilder; }
-    @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
-        String aliasName = "Recursive_" + ctx.registry().next("alias");
-        var alias = new TypeAliasBuilder(builder.getRegistry(), aliasName, "List<" + aliasName + ">");
-        builder.getRegistry(); // ensure registry is used
-        ((ProgramBuilder) builder).addChild(alias);
+
+    @Override
+    public IBuilder apply(IBuilder builder, MutationContext ctx) {
+        ProgramBuilder pb = (ProgramBuilder) builder;
+        String[] template = ALIAS_TEMPLATES[ctx.rng().nextInt(ALIAS_TEMPLATES.length)];
+        String aliasName = template[0] + "_" + ctx.registry().next("alias");
+        String targetType = template[1];
+        // Emit: typealias MyList_alias_0<T> = List<T>
+        var alias = new TypeAliasBuilder(builder.getRegistry(),
+                aliasName + "<T>", targetType);
+        pb.addChild(alias);
         return builder;
     }
 }
