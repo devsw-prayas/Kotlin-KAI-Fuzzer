@@ -53,13 +53,13 @@ public class TryCatchBuilder implements ILocalScopeBuilder, IBranchContainer<ILo
         String inner = indent(indentLevel + 1);
 
         String tryStr = tryBody.stream()
-                .map(s -> inner + s.build(indentLevel + 1))
+                .map(s -> s.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
         String catchStr = catchBody.stream()
-                .map(s -> inner + s.build(indentLevel + 1))
+                .map(s -> s.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
         String finallyStr = finallyBody.stream()
-                .map(s -> inner + s.build(indentLevel + 1))
+                .map(s -> s.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
 
         StringBuilder sb = new StringBuilder();

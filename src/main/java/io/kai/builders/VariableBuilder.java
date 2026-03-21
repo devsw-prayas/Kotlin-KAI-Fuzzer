@@ -8,18 +8,20 @@ import io.kai.contracts.capability.IMemberBuilder;
 import io.kai.contracts.capability.ITopLevelBuilder;
 
 import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocalScopeBuilder {
 
     private final String id;
     private final NameRegistry registry;
     private final boolean isMutable;
-    private final String type;
     private final IExpressionBuilder initializer;
     private final boolean nullable;
     private final boolean isLateinit;
     private final String customGetter;
     private final String customSetter;
+    private final Supplier<String> typeSupplier;
 
     // Main public constructor
     public VariableBuilder(NameRegistry registry, boolean isMutable,
@@ -27,7 +29,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
         this.registry = registry;
         this.id = registry.next("var");
         this.isMutable = isMutable;
-        this.type = type;
+        this.typeSupplier = () -> type;
         this.initializer = initializer;
         this.nullable = nullable;
         this.isLateinit = false;
@@ -37,12 +39,13 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
     // Private constructor for withoutChild and copies
     private VariableBuilder(NameRegistry registry, String id, boolean isMutable,
-                            String type, IExpressionBuilder initializer, boolean nullable,
-                            boolean isLateinit, String customGetter, String customSetter) {
+                            Supplier<String> typeSupplier, IExpressionBuilder initializer,
+                            boolean nullable, boolean isLateinit,
+                            String customGetter, String customSetter) {
         this.registry = registry;
         this.id = id;
         this.isMutable = isMutable;
-        this.type = type;
+        this.typeSupplier = typeSupplier;
         this.initializer = initializer;
         this.nullable = nullable;
         this.isLateinit = isLateinit;
@@ -61,7 +64,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
         if (isLateinit) sb.append("lateinit ");
         sb.append(keyword).append(" ").append(id)
-                .append(": ").append(type).append(nullable ? "?" : "");
+                .append(": ").append(typeSupplier.get()).append(nullable ? "?" : "");
 
         // lateinit vars can't have initializers
         if (!isLateinit) {
@@ -99,7 +102,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     public IBuilder withoutChild(IBuilder builder) {
         if (builder.equals(initializer)) {
             IExpressionBuilder defaultExpr = new IntLiteralBuilder(registry, "200");
-            return new VariableBuilder(registry, id, isMutable, type,
+            return new VariableBuilder(registry, id, isMutable, typeSupplier,
                     defaultExpr, nullable, isLateinit, customGetter, customSetter);
         }
         return this;
@@ -107,7 +110,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
     // Getters
     public boolean isMutable() { return isMutable; }
-    public String getType() { return type; }
+    public String getType() { return typeSupplier.get(); }
     public IExpressionBuilder getInitializer() { return initializer; }
     public boolean isLateinit() { return isLateinit; }
     public String getCustomGetter() { return customGetter; }
@@ -115,20 +118,39 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
     // Setters — return new instance (immutable style)
     public VariableBuilder withLateinit() {
-        return new VariableBuilder(registry, id, true, type,
+        return new VariableBuilder(registry, id, true, typeSupplier,
                 initializer, false, true, customGetter, customSetter);
     }
 
     public VariableBuilder withGetter(String getter) {
-        return new VariableBuilder(registry, id, isMutable, type,
+        return new VariableBuilder(registry, id, isMutable, typeSupplier,
                 initializer, nullable, isLateinit, getter, customSetter);
     }
 
     public VariableBuilder withSetter(String setter) {
-        return new VariableBuilder(registry, id, isMutable, type,
+        return new VariableBuilder(registry, id, isMutable, typeSupplier,
                 initializer, nullable, isLateinit, customGetter, setter);
     }
 
     @Override
     public NameRegistry getRegistry() { return registry; }
+
+    public boolean isNullable() { return nullable; }
+
+    public static VariableBuilder ofClass(NameRegistry registry, boolean isMutable,
+                                          IExpressionBuilder initializer, boolean nullable,
+                                          ClassBuilder classRef) {
+        Supplier<String> typeSupplier = () -> {
+            String id = classRef.id();
+            if (!classRef.getTypeParams().isEmpty()) {
+                id += "<" + classRef.getTypeParams().keySet().stream()
+                        .map(p -> "*")
+                        .collect(Collectors.joining(", ")) + ">";
+            }
+            return id;
+        };
+        return new VariableBuilder(
+                registry, registry.next("var"), isMutable,
+                typeSupplier, initializer, nullable, false, null, null);
+    }
 }

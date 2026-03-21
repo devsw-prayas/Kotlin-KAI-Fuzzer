@@ -1,5 +1,7 @@
 package io.kai.mutation.context;
 
+import io.kai.builders.ClassBuilder;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +23,8 @@ public class SymbolTable {
             boolean isData,
             boolean isAbstract,
             boolean isOpen,
-            boolean isObject
+            boolean isObject,
+            ClassBuilder classRef
     ) {}
 
     private final Map<String, FunctionMeta> functions = new LinkedHashMap<>();

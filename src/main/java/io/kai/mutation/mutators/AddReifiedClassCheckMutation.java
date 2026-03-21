@@ -7,6 +7,8 @@ import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
 import io.kai.mutation.MutationUtility;
+import io.kai.mutation.ScopeContextBuilder;
+import io.kai.mutation.context.ScopeContext;
 
 import java.util.Set;
 
@@ -15,12 +17,18 @@ public class AddReifiedClassCheckMutation implements IMutationPolicy {
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(FunctionBuilder.class); }
     @Override public String id() { return "add_reified_class_check"; }
     @Override public boolean compatibleWith(IBuilder b) { return b instanceof FunctionBuilder; }
-    @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
+    @Override
+    public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder fn = (FunctionBuilder) builder;
         fn.setInline(true);
         String tName = ctx.registry().next("T");
         fn.addBoundedTypeParam(tName, "reified");
-        var lit = new IntLiteralBuilder(ctx.registry(), "(42 is " + tName + ")");
+
+        ScopeContext scope = ScopeContextBuilder.buildFor(ctx.root(), builder.id());
+        String varName = MutationUtility.pickVar(scope, ctx.rng());
+        String subject = varName != null ? varName : "42";
+
+        var lit = new IntLiteralBuilder(ctx.registry(), "(" + subject + " is " + tName + ")");
         var checkVar = new VariableBuilder(ctx.registry(), false, lit, false, "Boolean");
         MutationUtility.addChildSmart(fn, checkVar);
         return fn;
