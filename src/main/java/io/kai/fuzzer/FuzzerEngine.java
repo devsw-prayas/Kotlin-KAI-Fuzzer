@@ -5,6 +5,7 @@ import io.kai.contracts.IBuilder;
 import io.kai.corpus.CorpusMeta;
 import io.kai.contracts.visitor.StructuralHasher;
 import io.kai.compiler.coverage.CoverageSnapshot;
+import io.kai.destabilizer.DestabilizerRunner;
 import io.kai.mutation.MutationContext;
 import io.kai.mutation.chain.MutationChain;
 import io.kai.mutation.chain.MutationChainLog;
@@ -25,29 +26,42 @@ public class FuzzerEngine {
     private final FindingDeduplicator deduplicator;
     private volatile boolean running = true;
     private final long maxIterations; // 0 = unlimited
+    private final DestabilizerRunner destabilizerRunner; // null = disabled
+    private final Random destabRng = new Random();
 
-    public FuzzerEngine(FuzzerContext ctx, long maxIterations) {
+    public FuzzerEngine(FuzzerContext ctx, long maxIterations,
+                        DestabilizerRunner destabilizerRunner) {
         this.ctx = ctx;
         this.maxIterations = maxIterations;
         this.stats = new FuzzerStats(ctx.stats());
         this.deduplicator = new FindingDeduplicator();
+        this.destabilizerRunner = destabilizerRunner;
     }
-
     public void run() throws InterruptedException {
-        // Graceful shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n[Kai] Shutting down gracefully...");
             running = false;
             stats.stopReporting();
         }));
 
-        // Start stats reporter every 10 seconds
         stats.startReporting(10);
 
         ExecutorService executor = Executors.newWorkStealingPool(ctx.config().threadCount());
         for (int i = 0; i < ctx.config().threadCount(); i++) {
             executor.submit(this::workerLoop);
         }
+
+        // Start destabilizer as separate thread if enabled
+        if (destabilizerRunner != null) {
+            ExecutorService destabExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "kai-destabilizer");
+                t.setDaemon(true);
+                return t;
+            });
+            destabExecutor.submit(this::destabilizerLoop);
+            System.out.println("[Kai] Destabilizer pass enabled");
+        }
+
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
     }
 
@@ -93,7 +107,8 @@ public class FuzzerEngine {
                 Files.writeString(Path.of("./debug/program_" + System.nanoTime() + ".kt"), source);
 
                 // 5. Compile
-                CompilerResult result = ctx.runner().compile(source, chainLog);
+                CompilerResult result = ctx.runner().compile(source, chainLog,
+                        FuzzerRuntime.get().globalFlags());
                 // TEMP DEBUG
                 System.out.println("[DEBUG] exit=" + result.exitCode()
                         + " timedOut=" + result.timedOut()
@@ -142,6 +157,30 @@ public class FuzzerEngine {
 
             } catch (Exception e) {
                 System.err.println("[Worker] Error: " + e.getMessage());
+            }
+        }
+    }
+
+    private void destabilizerLoop() {
+        while (running) {
+            try {
+                if (ctx.manager().size() == 0) {
+                    Thread.sleep(1000);
+                    continue;
+                }
+                if (destabRng.nextDouble() < 0.30) {
+                    IBuilder seed = ctx.scheduler().selectSeed(ctx.manager().all());
+                    boolean found = destabilizerRunner.run(seed, destabRng);
+                    if (found) stats.recordFinding();
+                }
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                System.err.println("[DestabLoop] " + e.getClass().getSimpleName()
+                        + ": " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }

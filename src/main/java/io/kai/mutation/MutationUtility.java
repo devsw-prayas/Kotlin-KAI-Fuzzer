@@ -66,15 +66,6 @@ public class MutationUtility {
     public static String pickType(ScopeContext scope, Random rng) {
         List<String> types = new ArrayList<>(scope.getTypeParams());
         types.remove("Unit");
-
-        // Non-generic classes only as plain strings
-        for (SymbolTable.ClassMeta cls : scope.symbols().getAllClasses()) {
-            if (cls.typeParams().isEmpty()) {
-                types.add(cls.name());
-            }
-            // Generic classes handled via pickClassRef() + VariableBuilder.ofClass()
-        }
-
         if (types.isEmpty()) return "Int";
         return types.get(rng.nextInt(types.size()));
     }

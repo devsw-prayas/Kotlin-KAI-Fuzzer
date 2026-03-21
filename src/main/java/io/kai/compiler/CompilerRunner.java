@@ -6,6 +6,8 @@ import io.kai.mutation.chain.MutationChainLog;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -21,13 +23,22 @@ public class CompilerRunner {
     }
 
     public CompilerResult compile(String source, MutationChainLog chainLog) throws IOException {
-        Path tmpFile = writeTempFile(source);
+        return compile(source, chainLog, List.of());
+    }
 
-        ProcessBuilder pb = new ProcessBuilder(kotlincPath.toString(), tmpFile.toString());
+    public CompilerResult compile(String source, MutationChainLog chainLog,
+                                  List<String> extraFlags) throws IOException {
+        Path tmpFile = writeTempFile(source);
+        List<String> cmd = new ArrayList<>();
+        cmd.add(kotlincPath.toString());
+        cmd.addAll(extraFlags);
+        cmd.add(tmpFile.toString());
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(false);
         coverageCollector.attach(pb);
 
         long start = System.currentTimeMillis();
+        System.out.println("[CMD] " + cmd);
         Process process = pb.start();
 
         // Drain streams in parallel — prevents pipe buffer blocking

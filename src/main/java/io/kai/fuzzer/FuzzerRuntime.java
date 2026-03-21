@@ -7,6 +7,8 @@ import io.kai.builders.LoopBuilder;
 import io.kai.builders.expressions.*;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.NameRegistry;
+import io.kai.destabilizer.IDestabilizer;
+import io.kai.destabilizer.destabilizers.*;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationRegistry;
 import io.kai.mutation.mutators.*;
@@ -19,6 +21,8 @@ public final class FuzzerRuntime {
     private final Map<String, Double> mutationNastiness;
     private final MutationRegistry registry;
     private static final FuzzerRuntime INSTANCE = new FuzzerRuntime();
+    private final List<IDestabilizer> destabilizers = new ArrayList<>();
+    private final List<String> globalFlags;
 
     private void initPolicies() {
         // MVP-1
@@ -191,6 +195,8 @@ public final class FuzzerRuntime {
         initBuilderWeights();
         initMutationNastiness();
         initRegistry();
+        initDestabilizers();
+        globalFlags = collectAllFlags();
     }
 
     public static FuzzerRuntime get() {
@@ -233,4 +239,30 @@ public final class FuzzerRuntime {
     public List<IMutationPolicy> policies() {
         return policies;
     }
+
+    private void initDestabilizers() {
+        destabilizers.add(new ExplicitBackingFieldSuspendDestabilizer());
+        destabilizers.add(new ContractHoldsInDestabilizer());
+        destabilizers.add(new ExplicitBackingFieldContractDestabilizer());
+        destabilizers.add(new ReifiedCatchSuspendDestabilizer());
+        destabilizers.add(new ReifiedCatchStormDestabilizer());
+        destabilizers.add(new DataFlowExhaustivenessReifiedDestabilizer());
+        destabilizers.add(new ContextSensitiveContractDestabilizer());
+        destabilizers.add(new ExplicitBackingFieldReifiedCatchDestabilizer());
+        destabilizers.add(new DataFlowContractExhaustivenessDestabilizer());
+    }
+
+    public List<IDestabilizer> destabilizers() {
+        return destabilizers;
+    }
+
+    private List<String> collectAllFlags() {
+        Set<String> flags = new LinkedHashSet<>();
+        policies.forEach(p -> flags.addAll(p.requiredFlags()));
+        destabilizers.forEach(d -> flags.addAll(d.requiredFlags()));
+        System.out.println("[Kai] Global compiler flags: " + flags);
+        return List.copyOf(flags);
+    }
+
+    public List<String> globalFlags() { return globalFlags; }
 }

@@ -22,26 +22,25 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     private final String customGetter;
     private final String customSetter;
     private final Supplier<String> typeSupplier;
+    private final String explicitBackingFieldType;
+    private final String explicitBackingFieldExpr;
+    private final String customGetterBlock;
 
     // Main public constructor
     public VariableBuilder(NameRegistry registry, boolean isMutable,
                            IExpressionBuilder initializer, boolean nullable, String type) {
-        this.registry = registry;
-        this.id = registry.next("var");
-        this.isMutable = isMutable;
-        this.typeSupplier = () -> type;
-        this.initializer = initializer;
-        this.nullable = nullable;
-        this.isLateinit = false;
-        this.customGetter = null;
-        this.customSetter = null;
+        this(registry, registry.next("var"), isMutable, () -> type,
+                initializer, nullable, false, null, null, null, null, null);
+
     }
 
     // Private constructor for withoutChild and copies
     private VariableBuilder(NameRegistry registry, String id, boolean isMutable,
                             Supplier<String> typeSupplier, IExpressionBuilder initializer,
                             boolean nullable, boolean isLateinit,
-                            String customGetter, String customSetter) {
+                            String customGetter, String customSetter,
+                            String explicitBackingFieldType, String explicitBackingFieldExpr,
+                            String customGetterBlock) {
         this.registry = registry;
         this.id = id;
         this.isMutable = isMutable;
@@ -51,6 +50,9 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
         this.isLateinit = isLateinit;
         this.customGetter = customGetter;
         this.customSetter = customSetter;
+        this.explicitBackingFieldType = explicitBackingFieldType;
+        this.explicitBackingFieldExpr = explicitBackingFieldExpr;
+        this.customGetterBlock = customGetterBlock;
     }
 
     @Override
@@ -68,18 +70,23 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
 
         // lateinit vars can't have initializers
         if (!isLateinit) {
-            if (customGetter == null && customSetter == null) {
+            if (explicitBackingFieldType != null) {
+                sb.append("\n").append(indent(indentLevel + 1))
+                        .append("field = ").append(explicitBackingFieldExpr);
+            }
+            if (customGetterBlock != null) {
+                sb.append("\n").append(indent(indentLevel + 1)).append("get() {\n")
+                        .append(indent(indentLevel + 2)).append(customGetterBlock).append("\n")
+                        .append(indent(indentLevel + 1)).append("}");
+            } else if (customGetter != null) {
+                sb.append("\n").append(indent(indentLevel + 1))
+                        .append("get() = ").append(customGetter);
+            } else if (explicitBackingFieldType == null) {
                 sb.append(" = ").append(initializer.build(indentLevel));
-            } else {
-                // custom getter/setter — no initializer
-                if (customGetter != null) {
-                    sb.append("\n").append(indent(indentLevel + 1))
-                            .append("get() = ").append(customGetter);
-                }
-                if (customSetter != null) {
-                    sb.append("\n").append(indent(indentLevel + 1))
-                            .append("set(value) { ").append(customSetter).append(" }");
-                }
+            }
+            if (customSetter != null) {
+                sb.append("\n").append(indent(indentLevel + 1))
+                        .append("set(value) { ").append(customSetter).append(" }");
             }
         }
 
@@ -103,7 +110,8 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
         if (builder.equals(initializer)) {
             IExpressionBuilder defaultExpr = new IntLiteralBuilder(registry, "200");
             return new VariableBuilder(registry, id, isMutable, typeSupplier,
-                    defaultExpr, nullable, isLateinit, customGetter, customSetter);
+                    defaultExpr, nullable, isLateinit, customGetter, customSetter,
+                    explicitBackingFieldType, explicitBackingFieldExpr, customGetterBlock);
         }
         return this;
     }
@@ -119,17 +127,32 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     // Setters — return new instance (immutable style)
     public VariableBuilder withLateinit() {
         return new VariableBuilder(registry, id, true, typeSupplier,
-                initializer, false, true, customGetter, customSetter);
+                initializer, false, true, customGetter, customSetter,
+                explicitBackingFieldType, explicitBackingFieldExpr, customGetterBlock);
     }
 
     public VariableBuilder withGetter(String getter) {
         return new VariableBuilder(registry, id, isMutable, typeSupplier,
-                initializer, nullable, isLateinit, getter, customSetter);
+                initializer, nullable, isLateinit, getter, customSetter,
+                explicitBackingFieldType, explicitBackingFieldExpr, customGetterBlock);
     }
 
     public VariableBuilder withSetter(String setter) {
         return new VariableBuilder(registry, id, isMutable, typeSupplier,
-                initializer, nullable, isLateinit, customGetter, setter);
+                initializer, nullable, isLateinit, customGetter, setter,
+                explicitBackingFieldType, explicitBackingFieldExpr, customGetterBlock);
+    }
+
+    public VariableBuilder withExplicitBackingField(String fieldType, String fieldExpr) {
+        return new VariableBuilder(registry, id, isMutable, typeSupplier,
+                initializer, nullable, isLateinit, customGetter, customSetter,
+                fieldType, fieldExpr, customGetterBlock);
+    }
+
+    public VariableBuilder withGetterBlock(String block) {
+        return new VariableBuilder(registry, id, isMutable, typeSupplier,
+                initializer, nullable, isLateinit, customGetter, customSetter,
+                explicitBackingFieldType, explicitBackingFieldExpr, block);
     }
 
     @Override
@@ -151,6 +174,7 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
         };
         return new VariableBuilder(
                 registry, registry.next("var"), isMutable,
-                typeSupplier, initializer, nullable, false, null, null);
+                typeSupplier, initializer, nullable, false, null, null,
+                null, null, null);
     }
 }
