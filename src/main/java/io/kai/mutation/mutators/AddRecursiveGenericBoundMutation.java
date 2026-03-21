@@ -21,6 +21,7 @@ public class AddRecursiveGenericBoundMutation implements IMutationPolicy {
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         ClassBuilder cb = (ClassBuilder) builder;
+        if (!cb.getTypeParams().isEmpty()) return cb;
         String tName = ctx.registry().next("T");
         cb.addBoundedTypeParam(tName, cb.id() + "<" + tName + ">");
         return cb;

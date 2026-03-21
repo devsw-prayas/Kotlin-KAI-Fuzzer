@@ -6,6 +6,7 @@ import io.kai.builders.SealedClassBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -13,7 +14,11 @@ import java.util.Set;
 public class AddSealedClassMutation implements IMutationPolicy {
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(ProgramBuilder.class); }
     @Override public String id() { return "add_sealed_class"; }
-    @Override public boolean compatibleWith(IBuilder b) { return b instanceof ProgramBuilder; }
+    @Override
+    public boolean compatibleWith(IBuilder b) {
+        return b instanceof ProgramBuilder pb
+                && MutationUtility.countChildrenOfType(pb, SealedClassBuilder.class) < 2;
+    }
     @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
         ProgramBuilder pb = (ProgramBuilder) builder;
         SealedClassBuilder sealed = new SealedClassBuilder(builder.getRegistry());

@@ -1,6 +1,7 @@
 package io.kai.mutation;
 
 import io.kai.contracts.IBuilder;
+import io.kai.contracts.capability.IContainer;
 
 import java.util.ArrayList;
 import java.util.HashMap;

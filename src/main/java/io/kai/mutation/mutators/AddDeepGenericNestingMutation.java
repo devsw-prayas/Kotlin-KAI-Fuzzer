@@ -6,6 +6,7 @@ import io.kai.builders.expressions.NullLiteralBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -25,12 +26,11 @@ public class AddDeepGenericNestingMutation implements IMutationPolicy {
     @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder fn = (FunctionBuilder) builder;
         String deepType = DEEP_TYPES[ctx.rng().nextInt(DEEP_TYPES.length)];
-        var nullLit = new NullLiteralBuilder(builder.getRegistry());
         // Override type via raw expression trick — emit "null as? DeepType"
         var castLit = new io.kai.builders.expressions.IntLiteralBuilder(
                 builder.getRegistry(), "null as? " + deepType);
         var typedVar = new VariableBuilder(builder.getRegistry(), false, castLit, true, deepType);
-        fn.addChild(typedVar);
+        MutationUtility.addChildSmart(fn, typedVar);
         return fn;
     }
 }

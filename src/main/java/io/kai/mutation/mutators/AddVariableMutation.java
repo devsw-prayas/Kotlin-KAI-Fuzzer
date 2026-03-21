@@ -8,6 +8,7 @@ import io.kai.contracts.capability.IContainer;
 import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -32,11 +33,12 @@ public class AddVariableMutation implements IMutationPolicy {
         IExpressionBuilder exp = new IntLiteralBuilder(builder.getRegistry(), "100");
         VariableBuilder newVar = new VariableBuilder(builder.getRegistry(), true, exp, true, "Int");
 
-        if(builder instanceof IBranchContainer<?> bc){
+        if (builder instanceof IBranchContainer<?> bc) {
             int branch = ctx.rng().nextInt(bc.branchLength());
             bc.addChildRaw(newVar, branch);
-        }else if(builder instanceof IContainer<?> c)
-            c.addChildRaw(newVar);
+        } else if (builder instanceof IContainer<?> c) {
+            MutationUtility.addChildSmart(c, newVar);
+        }
         return builder;
     }
 }

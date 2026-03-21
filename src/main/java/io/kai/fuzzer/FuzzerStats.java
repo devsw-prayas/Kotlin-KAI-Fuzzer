@@ -46,13 +46,13 @@ public class FuzzerStats {
 
         long intervalMs = now - lastReportTime;
         long intervalIter = iter - lastIterSnapshot.get();
-        long ips = intervalMs > 0 ? (intervalIter * 1000) / intervalMs : 0;
-
         lastIterSnapshot.set(iter);
         lastReportTime = now;
 
+        double ips = intervalMs > 0 ? (intervalIter * 1000.0) / intervalMs : 0;
+
         System.out.printf(
-                "[Kai] iter=%d iter/s=%d corpus=%d findings=%d elapsed=%ds%n",
+                "[Kai] iter=%d iter/s=%.2f corpus=%d findings=%d elapsed=%ds%n",
                 iter, ips, corpusSize.get(), totalFindings.get(), elapsed
         );
     }

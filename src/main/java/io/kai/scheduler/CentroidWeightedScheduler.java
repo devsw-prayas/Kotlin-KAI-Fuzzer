@@ -13,18 +13,28 @@ public class CentroidWeightedScheduler implements IScheduler {
     private final Random rng;
     private final int maxDepth;
 
+    // Centroid state
+    private double centroidDepth = 0.0;
+    private double centroidSiblingIndex = 0.0;
+    private int stepCount = 0;
+
+    private static final double ALPHA = 0.12;
+    private static final double REPULSION_STRENGTH = 0.15;
+    private static final int WARMUP_STEPS = 3;
+
+    // Lightweight spatial coordinate
+    private record NodePosition(int depth, int siblingIndex) {}
+
     public CentroidWeightedScheduler(Random rng, int maxDepth) {
         this.rng = rng;
         this.maxDepth = maxDepth;
     }
-
 
     @Override
     public IBuilder selectSeed(List<IBuilder> corpus) {
         if (corpus.isEmpty()) throw new IllegalStateException("Corpus is empty");
         if (corpus.size() == 1) return corpus.get(0);
 
-        // Weight each seed by the interest score of its root node
         double[] weights = new double[corpus.size()];
         double total = 0;
         for (int i = 0; i < corpus.size(); i++) {
@@ -32,41 +42,39 @@ public class CentroidWeightedScheduler implements IScheduler {
             weights[i] = w;
             total += w;
         }
+        // Reset centroid on new seed selection
+        centroidDepth = 0.0;
+        centroidSiblingIndex = 0.0;
+        stepCount = 0;
         return corpus.get(weightedRandom(weights, total));
     }
 
-
-    /**
-     * Collects all nodes in the tree with their depths, then picks one via
-     * weighted random where weight = interestScore + depthJitter.
-     * Shallower nodes get larger jitter range — biases toward structural nodes.
-     */
     public IBuilder selectNode(IBuilder root) {
         List<IBuilder> nodes = new ArrayList<>();
-        List<Integer> depths = new ArrayList<>();
-        collectAll(root, 0, nodes, depths);
+        List<NodePosition> positions = new ArrayList<>();
+        collectAll(root, 0, 0, nodes, positions);
 
         if (nodes.isEmpty()) return root;
 
         double[] weights = new double[nodes.size()];
         double total = 0;
         for (int i = 0; i < nodes.size(); i++) {
-            int depth = depths.get(i);
-            int jitterRange = Math.max(1, maxDepth - depth + 1);
-            double jitter = (rng.nextDouble() * 2 - 1) * jitterRange; // [-jitterRange, +jitterRange]
-            double weight = Math.max(0.01, FuzzerRuntime.get().builderWeight(nodes.get(i)) + jitter);
+            int depth = positions.get(i).depth();
+            int jitterRange = Math.min(2, Math.max(1, maxDepth - depth + 1));
+            double depthJitter = (rng.nextDouble() * 2 - 1) * jitterRange;
+            double repulsion = computeRepulsion(positions.get(i));
+            double weight = Math.max(0.01,
+                    FuzzerRuntime.get().builderWeight(nodes.get(i))
+                            + depthJitter + repulsion);
             weights[i] = weight;
             total += weight;
         }
-        return nodes.get(weightedRandom(weights, total));
+
+        int idx = weightedRandom(weights, total);
+        updateCentroid(positions.get(idx));
+        return nodes.get(idx);
     }
 
-
-    /**
-     * Computes effectiveWeight for the node, then picks the policy whose
-     * nastiness is closest to targetNastiness = 1.0 - effectiveWeight.
-     * High interest node → low nastiness target → nastiest mutation applied.
-     */
     @Override
     public IMutationPolicy selectPolicy(IBuilder node,
                                         List<IMutationPolicy> candidates,
@@ -75,11 +83,10 @@ public class CentroidWeightedScheduler implements IScheduler {
         if (candidates.size() == 1) return candidates.get(0);
 
         double interestScore = FuzzerRuntime.get().builderWeight(node);
-        int jitter = rng.nextInt(Math.max(1, maxDepth));
-        double effectiveWeight = Math.min(1.0, interestScore + (jitter / (double) maxDepth));
+        double jitter = (rng.nextDouble() * 2 - 1) * (1.0 / maxDepth);
+        double effectiveWeight = Math.max(0.01, Math.min(1.0, interestScore + jitter));
         double targetNastiness = 1.0 - effectiveWeight;
 
-        // Pick policy whose nastiness is closest to targetNastiness
         IMutationPolicy best = candidates.get(0);
         double bestDiff = Math.abs(FuzzerRuntime.get().nastiness(best.id()) - targetNastiness);
 
@@ -98,19 +105,30 @@ public class CentroidWeightedScheduler implements IScheduler {
         // MVP-2: no-op — LLM score tuning deferred to MVP-3
     }
 
+    private void updateCentroid(NodePosition pos) {
+        centroidDepth = ALPHA * pos.depth() + (1 - ALPHA) * centroidDepth;
+        centroidSiblingIndex = ALPHA * pos.siblingIndex() + (1 - ALPHA) * centroidSiblingIndex;
+        stepCount++;
+    }
 
-    private void collectAll(IBuilder node, int depth,
-                             List<IBuilder> nodes, List<Integer> depths) {
+    private double computeRepulsion(NodePosition pos) {
+        if (stepCount < WARMUP_STEPS) return 0.0;
+        double dDepth = pos.depth() - centroidDepth;
+        double dSibling = pos.siblingIndex() - centroidSiblingIndex;
+        double distance = Math.sqrt(dDepth * dDepth + dSibling * dSibling);
+        return distance * REPULSION_STRENGTH;
+    }
+
+    private void collectAll(IBuilder node, int depth, int siblingIndex,
+                            List<IBuilder> nodes, List<NodePosition> positions) {
         nodes.add(node);
-        depths.add(depth);
-        for (var child : node.children()) {
-            collectAll(child, depth + 1, nodes, depths);
+        positions.add(new NodePosition(depth, siblingIndex));
+        List<? extends IBuilder> children = node.children();
+        for (int i = 0; i < children.size(); i++) {
+            collectAll(children.get(i), depth + 1, i, nodes, positions);
         }
     }
 
-    /**
-     * Weighted random selection — returns index.
-     */
     private int weightedRandom(double[] weights, double total) {
         double r = rng.nextDouble() * total;
         double cumulative = 0;

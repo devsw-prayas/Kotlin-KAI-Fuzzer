@@ -6,6 +6,7 @@ import io.kai.builders.expressions.IntLiteralBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -22,7 +23,7 @@ public class AddReifiedNewInstanceMutation implements IMutationPolicy {
         // emit: val cls_0 = T::class.java
         var lit = new IntLiteralBuilder(ctx.registry(), tName + "::class.java");
         var clsVar = new VariableBuilder(ctx.registry(), false, lit, false, "Class<" + tName + ">");
-        fn.addChild(clsVar);
+        MutationUtility.addChildSmart(fn, clsVar);
         return fn;
     }
 }

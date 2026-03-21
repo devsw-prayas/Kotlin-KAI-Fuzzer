@@ -7,6 +7,7 @@ import io.kai.contracts.IBuilder;
 import io.kai.contracts.capability.IContainer;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -22,10 +23,11 @@ public class AddFunctionMutation implements IMutationPolicy {
     }
 
     @Override
-    public boolean compatibleWith(IBuilder builder) {
-        return targetTypes().contains(builder.getClass());
+    public boolean compatibleWith(IBuilder b) {
+        if (b instanceof ProgramBuilder pb)
+            return MutationUtility.countChildrenOfType(pb, FunctionBuilder.class) < 3;
+        return b instanceof ClassBuilder;
     }
-
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder newFunc = new FunctionBuilder(builder.getRegistry());

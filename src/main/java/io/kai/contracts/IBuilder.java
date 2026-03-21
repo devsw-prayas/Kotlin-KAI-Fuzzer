@@ -1,5 +1,6 @@
 package io.kai.contracts;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public interface IBuilder {
@@ -13,5 +14,8 @@ public interface IBuilder {
     }
     default NameRegistry getRegistry() {
         return null;
+    }
+    default List<IBuilder> childrenRaw() {
+        return new ArrayList<>(children());
     }
 }

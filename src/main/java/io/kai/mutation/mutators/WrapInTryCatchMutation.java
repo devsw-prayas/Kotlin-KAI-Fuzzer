@@ -21,16 +21,28 @@ public class WrapInTryCatchMutation implements IMutationPolicy {
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(FunctionBuilder.class); }
     @Override public String id() { return "wrap_in_try_catch"; }
     @Override public boolean compatibleWith(IBuilder b) { return b instanceof FunctionBuilder; }
-    @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
+    @Override
+    public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder fn = (FunctionBuilder) builder;
         List<? extends IBuilder> existing = new ArrayList<>(fn.children());
         String exType = EXCEPTION_TYPES[ctx.rng().nextInt(EXCEPTION_TYPES.length)];
         TryCatchBuilder tryCatch = new TryCatchBuilder(builder.getRegistry(), exType);
+
+        List<IBuilder> returns = new ArrayList<>();
         for (IBuilder child : existing) {
-            if (child instanceof ILocalScopeBuilder ls) tryCatch.addChild(ls, 0);
+            if (child.build(0).trim().startsWith("return")) {
+                returns.add(child);
+            } else if (child instanceof ILocalScopeBuilder ls) {
+                tryCatch.addChild(ls, 0);
+            }
         }
+
         fn.clear();
         fn.addChild(tryCatch);
+        // Re-add return statements after the try/catch
+        for (IBuilder r : returns) {
+            fn.addChildRaw(r);
+        }
         return fn;
     }
 }

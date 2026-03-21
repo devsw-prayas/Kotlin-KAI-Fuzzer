@@ -167,4 +167,5 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     public void setOperatorName(String name) {
         operatorName = name;
     }
+    public String getOperatorName() {return operatorName;}
 }

@@ -6,6 +6,7 @@ import io.kai.builders.VariableBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -21,7 +22,7 @@ public class AddReifiedClassCheckMutation implements IMutationPolicy {
         fn.addBoundedTypeParam(tName, "reified");
         var lit = new IntLiteralBuilder(ctx.registry(), "(42 is " + tName + ")");
         var checkVar = new VariableBuilder(ctx.registry(), false, lit, false, "Boolean");
-        fn.addChild(checkVar);
+        MutationUtility.addChildSmart(fn, checkVar);
         return fn;
     }
 }

@@ -6,10 +6,7 @@ import io.kai.contracts.capability.IGeneric;
 import io.kai.contracts.capability.IMemberBuilder;
 import io.kai.contracts.capability.ITopLevelBuilder;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder>, IGeneric {
@@ -25,6 +22,7 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     private boolean isObject;
     private final List<String> superTypes;
     private final List<Parameter> primaryConstructorParams;
+    private Set<String> usedOperators = new HashSet<>();
 
     public ClassBuilder(NameRegistry registry) {
         this.builders = new ArrayList<>();
@@ -43,7 +41,8 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     private ClassBuilder(NameRegistry registry, String id, List<IMemberBuilder> builders,
                          Map<String, String> typeParams, boolean isSealed, boolean isData,
                          boolean isAbstract, boolean isOpen, boolean isObject,
-                         List<String> superTypes, List<Parameter> primaryConstructorParams) {
+                         List<String> superTypes, List<Parameter> primaryConstructorParams,
+                         Set<String> usedOperators) {
         this.registry = registry;
         this.id = id;
         this.builders = builders;
@@ -55,6 +54,7 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
         this.isObject = isObject;
         this.superTypes = new ArrayList<>(superTypes);
         this.primaryConstructorParams = new ArrayList<>(primaryConstructorParams);
+        this.usedOperators = new LinkedHashSet<>(usedOperators);
     }
 
     @Override
@@ -120,10 +120,20 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     public IBuilder withoutChild(IBuilder builder) {
         ArrayList<IMemberBuilder> list = new ArrayList<>(builders);
         list.remove(builder);
+
+        // If removing an operator function, unregister its operator name
+        Set<String> newRegisteredOperators = new LinkedHashSet<>(usedOperators);
+        if (builder instanceof FunctionBuilder fn && fn.isOperator()
+                && fn.getOperatorName() != null) {
+            newRegisteredOperators.remove(fn.getOperatorName());
+        }
+
         return new ClassBuilder(registry, id, list,
                 new LinkedHashMap<>(typeParams), isSealed, isData,
                 isAbstract, isOpen, isObject,
-                new ArrayList<>(superTypes), new ArrayList<>(primaryConstructorParams));
+                new ArrayList<>(superTypes),
+                new ArrayList<>(primaryConstructorParams),
+                newRegisteredOperators);
     }
 
     @Override
@@ -185,4 +195,12 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     public boolean isObject() { return isObject; }
     public List<String> getSuperTypes() { return superTypes; }
     public List<Parameter> getPrimaryConstructorParams() { return primaryConstructorParams; }
+
+    public boolean hasOperator(String name) {
+        return usedOperators.contains(name);
+    }
+
+    public void registerOperator(String name) {
+        usedOperators.add(name);
+    }
 }

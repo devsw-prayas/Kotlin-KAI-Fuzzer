@@ -39,7 +39,7 @@ public final class FuzzerRuntime {
         // Tier 2
         policies.add(new AddRecursiveGenericBoundMutation());
         policies.add(new AddDeepGenericNestingMutation());
-       // policies.add(new AddSelfReferentialTypeAliasMutation());
+        policies.add(new AddSelfReferentialTypeAliasMutation());
         policies.add(new AddContravariantBoundMutation());
         policies.add(new AddMultipleUpperBoundMutation());
 

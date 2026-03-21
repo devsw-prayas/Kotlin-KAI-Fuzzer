@@ -8,8 +8,9 @@ import io.kai.contracts.Parameter;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class AddOperatorOverloadMutation implements IMutationPolicy {
 
@@ -28,12 +29,24 @@ public class AddOperatorOverloadMutation implements IMutationPolicy {
 
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(ClassBuilder.class); }
     @Override public String id() { return "add_operator_overload"; }
-    @Override public boolean compatibleWith(IBuilder b) { return b instanceof ClassBuilder; }
+    @Override
+    public boolean compatibleWith(IBuilder b) {
+        if (!(b instanceof ClassBuilder cb)) return false;
+        return Arrays.stream(OPERATORS)
+                .anyMatch(op -> !cb.hasOperator(op.name()));
+    }
 
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         ClassBuilder cb = (ClassBuilder) builder;
-        OpSpec op = OPERATORS[ctx.rng().nextInt(OPERATORS.length)];
+
+        List<OpSpec> available = Arrays.stream(OPERATORS)
+                .filter(op -> !cb.hasOperator(op.name()))
+                .toList();
+        if (available.isEmpty()) return builder;
+
+        OpSpec op = available.get(ctx.rng().nextInt(available.size()));
+        cb.registerOperator(op.name());
 
         FunctionBuilder fn = new FunctionBuilder(builder.getRegistry());
         fn.setOperator(true);
@@ -41,12 +54,7 @@ public class AddOperatorOverloadMutation implements IMutationPolicy {
         fn.setOperatorName(op.name());
 
         if (op.isBinary()) {
-            // Build full parameterized type — class_0<T_0, T_1> not bare class_0
-            String paramType = cb.id();
-            if (!cb.getTypeParams().isEmpty()) {
-                paramType += "<" + String.join(", ", cb.getTypeParams().keySet()) + ">";
-            }
-            fn.addParam(Parameter.simple("other", paramType));
+            fn.addParam(Parameter.ofClass("other", cb));
         }
 
         // Return statement — always last, never inside a block

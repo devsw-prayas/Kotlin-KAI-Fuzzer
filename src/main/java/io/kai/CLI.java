@@ -87,7 +87,7 @@ public class CLI implements Callable<Integer> {
         CompilerRunner runner = new CompilerRunner(kotlincPath, timeoutMs, coverage);
         ArtifactStore store = new ArtifactStore(logDir);
 
-        MutationChainBuilder chainBuilder = new MutationChainBuilder(FuzzerRuntime.get().registry(), maxDepth);
+        MutationChainBuilder chainBuilder = new MutationChainBuilder(FuzzerRuntime.get().registry(), maxDepth, scheduler);
         FuzzerConfig config = new FuzzerConfig(batchSize, maxDepth, threadCount, timeoutMs, logDir, kotlincPath, maxIterations);
 
         FuzzerContext ctx = new FuzzerContext(

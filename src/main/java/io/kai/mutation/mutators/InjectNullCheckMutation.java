@@ -8,6 +8,7 @@ import io.kai.contracts.capability.IContainer;
 import io.kai.contracts.capability.IExpressionBuilder;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationContext;
+import io.kai.mutation.MutationUtility;
 
 import java.util.Set;
 
@@ -39,7 +40,7 @@ public class InjectNullCheckMutation implements IMutationPolicy {
             int branch = ctx.rng().nextInt(bc.branchLength());
             bc.addChildRaw(nullVar, branch);
         } else if (builder instanceof IContainer<?> c) {
-            c.addChildRaw(nullVar);
+            MutationUtility.addChildSmart(c, nullVar);
         }
         return builder;
     }
