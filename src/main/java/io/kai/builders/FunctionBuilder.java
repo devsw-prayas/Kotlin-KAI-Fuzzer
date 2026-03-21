@@ -3,10 +3,7 @@ package io.kai.builders;
 import io.kai.contracts.*;
 import io.kai.contracts.capability.*;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
@@ -21,11 +18,12 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     private boolean isOperator;
     private final List<Parameter> parameters;
     private String returnType;
+    private String operatorName = null;
 
     private FunctionBuilder(List<ILocalScopeBuilder> builders, NameRegistry registry,
                             String id, Map<String, String> typeParams,
                             boolean isInline, boolean isSuspend, boolean isOperator,
-                            List<Parameter> parameters, String returnType) {
+                            List<Parameter> parameters, String returnType, String operatorName) {
         this.builders = builders;
         this.registry = registry;
         this.id = id;
@@ -35,11 +33,12 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
         this.isOperator = isOperator;
         this.parameters = parameters;
         this.returnType = returnType;
+        this.operatorName = operatorName;
     }
 
     public FunctionBuilder(NameRegistry registry) {
         this(new ArrayList<>(), registry, registry.next("fun"), new LinkedHashMap<>(),
-                false, false, false, new ArrayList<>(), "Unit");
+                false, false, false, new ArrayList<>(), "Unit", null);
     }
 
     @Override
@@ -65,7 +64,7 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
         String typeParamStr = buildTypeParams();
         if (!typeParamStr.isEmpty()) prefix.append(typeParamStr).append(" ");
 
-        prefix.append(id)
+        prefix.append(operatorName != null ? operatorName : id)
                 .append("(").append(paramsStr).append(")")
                 .append(": ").append(returnType)
                 .append(" {\n")
@@ -101,7 +100,7 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
         list.remove(builder);
         return new FunctionBuilder(list, registry, id,
                 new LinkedHashMap<>(typeParams), isInline, isSuspend, isOperator,
-                new ArrayList<>(parameters), returnType);
+                new ArrayList<>(parameters), returnType, operatorName);
     }
 
     @Override
@@ -164,4 +163,8 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
 
     @Override
     public NameRegistry getRegistry() { return registry; }
+
+    public void setOperatorName(String name) {
+        operatorName = name;
+    }
 }

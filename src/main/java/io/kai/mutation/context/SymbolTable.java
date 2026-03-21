@@ -18,7 +18,10 @@ public class SymbolTable {
             String name,
             Map<String, String> typeParams,
             boolean isSealed,
-            boolean isData
+            boolean isData,
+            boolean isAbstract,
+            boolean isOpen,
+            boolean isObject
     ) {}
 
     private final Map<String, FunctionMeta> functions = new LinkedHashMap<>();

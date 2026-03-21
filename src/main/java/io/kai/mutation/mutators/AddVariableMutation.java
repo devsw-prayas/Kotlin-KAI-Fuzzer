@@ -30,7 +30,7 @@ public class AddVariableMutation implements IMutationPolicy {
     @Override
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         IExpressionBuilder exp = new IntLiteralBuilder(builder.getRegistry(), "100");
-        VariableBuilder newVar = new VariableBuilder(builder.getRegistry(), true, exp, true);
+        VariableBuilder newVar = new VariableBuilder(builder.getRegistry(), true, exp, true, "Int");
 
         if(builder instanceof IBranchContainer<?> bc){
             int branch = ctx.rng().nextInt(bc.branchLength());

@@ -19,12 +19,8 @@ public class AddReifiedClassCheckMutation implements IMutationPolicy {
         fn.setInline(true);
         String tName = ctx.registry().next("T");
         fn.addBoundedTypeParam(tName, "reified");
-        // emit: val check_0: Boolean = (42 is T)
-        // We store it as a raw expression via VariableBuilder with a custom type
-        String varName = ctx.registry().next("check");
-        // Use a raw literal that emits the is-check expression
         var lit = new IntLiteralBuilder(ctx.registry(), "(42 is " + tName + ")");
-        var checkVar = new VariableBuilder(ctx.registry(), false, lit, false);
+        var checkVar = new VariableBuilder(ctx.registry(), false, lit, false, "Boolean");
         fn.addChild(checkVar);
         return fn;
     }

@@ -32,7 +32,7 @@ public class InjectNullCheckMutation implements IMutationPolicy {
     public IBuilder apply(IBuilder builder, MutationContext ctx) {
         IExpressionBuilder nullExpr = new NullLiteralBuilder(builder.getRegistry());
         VariableBuilder nullVar = new VariableBuilder(
-                builder.getRegistry(), false, nullExpr, true // nullable = true
+                builder.getRegistry(), false, nullExpr, true, "Any" // nullable = true
         );
 
         if (builder instanceof IBranchContainer<?> bc) {

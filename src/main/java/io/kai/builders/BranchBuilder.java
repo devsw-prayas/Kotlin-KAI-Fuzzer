@@ -49,11 +49,11 @@ public class BranchBuilder implements ILocalScopeBuilder, IBranchContainer<ILoca
         String indent = indent(indentLevel);
 
         String thenBody = thenBranch.stream()
-                .map(c -> c.build(indentLevel))
+                .map(c -> c.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
 
         String elseBody = elseBranch.stream()
-                .map(c -> c.build(indentLevel))
+                .map(c -> c.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
 
         StringBuilder sb = new StringBuilder();

@@ -11,7 +11,10 @@ import java.util.Set;
 public class AddCrossinlineMutation implements IMutationPolicy {
     @Override public Set<Class<? extends IBuilder>> targetTypes() { return Set.of(FunctionBuilder.class); }
     @Override public String id() { return "add_crossinline"; }
-    @Override public boolean compatibleWith(IBuilder b) { return b instanceof FunctionBuilder; }
+    @Override
+    public boolean compatibleWith(IBuilder b) {
+        return b instanceof FunctionBuilder fn && !fn.isOperator();
+    }
     @Override public IBuilder apply(IBuilder builder, MutationContext ctx) {
         FunctionBuilder fn = (FunctionBuilder) builder;
         fn.setInline(true);

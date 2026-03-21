@@ -18,11 +18,11 @@ public class VariableBuilder implements ITopLevelBuilder, IMemberBuilder, ILocal
     private final IExpressionBuilder initializer;
     private final boolean nullable;
 
-    public VariableBuilder(NameRegistry registry, boolean isMutable, IExpressionBuilder initializer, boolean nullable) {
+    public VariableBuilder(NameRegistry registry, boolean isMutable, IExpressionBuilder initializer, boolean nullable, String type) {
         this.registry = registry;
         this.id = registry.next("var");
         this.isMutable = isMutable;
-        this.type = "Int";
+        this.type = type;
         this.initializer = initializer;
         this.nullable = nullable;
     }

@@ -26,11 +26,10 @@ public class AddDeepGenericNestingMutation implements IMutationPolicy {
         FunctionBuilder fn = (FunctionBuilder) builder;
         String deepType = DEEP_TYPES[ctx.rng().nextInt(DEEP_TYPES.length)];
         var nullLit = new NullLiteralBuilder(builder.getRegistry());
-        var deepVar = new VariableBuilder(builder.getRegistry(), false, nullLit, true);
         // Override type via raw expression trick — emit "null as? DeepType"
         var castLit = new io.kai.builders.expressions.IntLiteralBuilder(
                 builder.getRegistry(), "null as? " + deepType);
-        var typedVar = new VariableBuilder(builder.getRegistry(), false, castLit, true);
+        var typedVar = new VariableBuilder(builder.getRegistry(), false, castLit, true, deepType);
         fn.addChild(typedVar);
         return fn;
     }

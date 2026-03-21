@@ -31,7 +31,7 @@ public record MutationChain(List<MutationStep> steps) {
             );
 
             // 4. Apply the policy — get the mutated node
-            IBuilder mutated = policy.apply(target, ctx);
+            IBuilder mutated = policy.apply(target, stepCtx);
 
             // 5. If the policy returned the same node (in-place mutation like addChild),
             //    nothing more to do — the list was already mutated.

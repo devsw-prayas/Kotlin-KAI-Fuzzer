@@ -20,6 +20,12 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     private boolean isSealed;
     private boolean isData;
 
+    private boolean isAbstract;
+    private boolean isOpen;
+    private boolean isObject;
+    private final List<String> superTypes;
+    private final List<Parameter> primaryConstructorParams;
+
     public ClassBuilder(NameRegistry registry) {
         this.builders = new ArrayList<>();
         this.registry = registry;
@@ -27,16 +33,28 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
         this.typeParams = new LinkedHashMap<>();
         this.isSealed = false;
         this.isData = false;
+        this.isAbstract = false;
+        this.isOpen = false;
+        this.isObject = false;
+        this.superTypes = new ArrayList<>();
+        this.primaryConstructorParams = new ArrayList<>();
     }
 
     private ClassBuilder(NameRegistry registry, String id, List<IMemberBuilder> builders,
-                         Map<String, String> typeParams, boolean isSealed, boolean isData) {
+                         Map<String, String> typeParams, boolean isSealed, boolean isData,
+                         boolean isAbstract, boolean isOpen, boolean isObject,
+                         List<String> superTypes, List<Parameter> primaryConstructorParams) {
         this.registry = registry;
         this.id = id;
         this.builders = builders;
         this.typeParams = typeParams;
         this.isSealed = isSealed;
         this.isData = isData;
+        this.isAbstract = isAbstract;
+        this.isOpen = isOpen;
+        this.isObject = isObject;
+        this.superTypes = new ArrayList<>(superTypes);
+        this.primaryConstructorParams = new ArrayList<>(primaryConstructorParams);
     }
 
     @Override
@@ -48,13 +66,38 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     public String build(int indentLevel) {
         String indent = indent(indentLevel);
         String body = builders.stream()
-                .map(child -> indent(indentLevel + 1) + child.build(indentLevel + 1))
+                .map(child -> child.build(indentLevel + 1))
                 .collect(Collectors.joining("\n"));
 
         StringBuilder prefix = new StringBuilder(indent);
+
+        // Modifiers
+        if (isAbstract) prefix.append("abstract ");
+        if (isOpen) prefix.append("open ");
         if (isSealed) prefix.append("sealed ");
         if (isData) prefix.append("data ");
-        prefix.append("class ").append(id).append(buildTypeParams()).append(" {\n")
+        prefix.append(isObject ? "object " : "class ").append(id);
+
+        // Type params (objects can't have type params)
+        if (!isObject) {
+            String tp = buildTypeParams();
+            if (!tp.isEmpty()) prefix.append(tp);
+        }
+
+        // Primary constructor params
+        if (!primaryConstructorParams.isEmpty()) {
+            String ctorParams = primaryConstructorParams.stream()
+                    .map(p -> "val " + p.name() + ": " + p.type())
+                    .collect(Collectors.joining(", "));
+            prefix.append("(").append(ctorParams).append(")");
+        }
+
+        // Super types
+        if (!superTypes.isEmpty()) {
+            prefix.append(" : ").append(String.join(", ", superTypes));
+        }
+
+        prefix.append(" {\n")
                 .append(body).append("\n")
                 .append(indent).append("}");
 
@@ -78,7 +121,9 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
         ArrayList<IMemberBuilder> list = new ArrayList<>(builders);
         list.remove(builder);
         return new ClassBuilder(registry, id, list,
-                new LinkedHashMap<>(typeParams), isSealed, isData);
+                new LinkedHashMap<>(typeParams), isSealed, isData,
+                isAbstract, isOpen, isObject,
+                new ArrayList<>(superTypes), new ArrayList<>(primaryConstructorParams));
     }
 
     @Override
@@ -129,4 +174,15 @@ public class ClassBuilder implements ITopLevelBuilder, IContainer<IMemberBuilder
     public NameRegistry getRegistry() {
         return registry;
     }
+
+    public void setAbstract(boolean v) { isAbstract = v; }
+    public void setOpen(boolean v) { isOpen = v; }
+    public void setObject(boolean v) { isObject = v; }
+    public void addSuperType(String t) { superTypes.add(t); }
+    public void addConstructorParam(Parameter p) { primaryConstructorParams.add(p); }
+    public boolean isAbstract() { return isAbstract; }
+    public boolean isOpen() { return isOpen; }
+    public boolean isObject() { return isObject; }
+    public List<String> getSuperTypes() { return superTypes; }
+    public List<Parameter> getPrimaryConstructorParams() { return primaryConstructorParams; }
 }

@@ -56,7 +56,10 @@ public class ScopeContextBuilder {
                     cb.id(),
                     new LinkedHashMap<>(cb.getTypeParams()),
                     cb.isSealed(),
-                    cb.isData()
+                    cb.isData(),
+                    cb.isAbstract(),
+                    cb.isOpen(),
+                    cb.isObject()
             ));
             for (String tp : cb.getTypeParams().keySet()) {
                 ctx.typeScope().declare(tp);
