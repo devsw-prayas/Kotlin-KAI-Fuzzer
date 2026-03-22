@@ -22,7 +22,7 @@ Corpus ────────────────────────�
                                         oracle → dedup → minimize → artifact
 ```
 
-The two passes are completely independent. Destabilizers never touch the corpus. Construction mutations never see destabilizer-injected constructs. The corpus stays clean.
+The two passes are completely independent. Destabilizer-injected constructs become part of the corpus entry permanently. Construction mutations in subsequent iterations build on top of them — producing emergent combinations that neither pass could generate alone. This is intentional: the destabilized corpus is richer and pushes the MCMC chain into more complex regions of program-space.
 
 ---
 
@@ -245,7 +245,7 @@ typealias DestabDFSentinel_sealed_0 = Boolean
 - **Guard strings prevent double-injection** — each destabilizer checks for its own injection marker before firing
 - **`IFirstStatement` guarantees position 0** — contract blocks are always the first statement in a function body, immune to construction mutations wrapping the body in loops or try/catch
 - **Lazy `Supplier<String>` receivers** — extension function receiver types are computed at `build()` time, after all construction mutations have finalised the referenced class's type params
-- **Corpus is never contaminated** — destabilizers operate on live corpus entries but globalFlags ensures all programs compile under the same flag set
+- **Destabilizer constructs persist in the corpus** — injections are permanent. Subsequent construction mutations build on destabilized programs, producing compound structures that emerge organically from the interaction of both passes. globalFlags ensures all corpus entries compile under the same flag set regardless of which constructs were injected.
 
 ---
 
