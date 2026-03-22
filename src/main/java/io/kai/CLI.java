@@ -1,16 +1,17 @@
 package io.kai;
 
 import io.kai.artifact.ArtifactStore;
+import io.kai.artifact.FindingDeduplicator;
 import io.kai.compiler.CompilerRunner;
 import io.kai.compiler.IOracle;
 import io.kai.compiler.coverage.ICoverageCollector;
-import io.kai.compiler.coverage.NoOpCoverageCollector;
 import io.kai.compiler.coverage.SimpleCoverageCollector;
 import io.kai.compiler.oracles.CompositeOracle;
 import io.kai.compiler.oracles.CrashOracle;
 import io.kai.compiler.oracles.IceOracle;
 import io.kai.corpus.ICorpusManager;
 import io.kai.corpus.SimpleCorpusManager;
+import io.kai.destabilizer.DestabilizerRunner;
 import io.kai.fuzzer.FuzzerConfig;
 import io.kai.fuzzer.FuzzerContext;
 import io.kai.fuzzer.FuzzerEngine;
@@ -19,13 +20,10 @@ import io.kai.llm.ILLMProvider;
 import io.kai.llm.NoOpLLMProvider;
 import io.kai.minimize.DeltaMinimizer;
 import io.kai.minimize.IMinimizer;
-import io.kai.minimize.NoOpMinimizer;
-import io.kai.mutation.MutationRegistry;
 import io.kai.mutation.MutationStats;
 import io.kai.mutation.chain.MutationChainBuilder;
 import io.kai.scheduler.CentroidWeightedScheduler;
 import io.kai.scheduler.IScheduler;
-import io.kai.scheduler.RandomScheduler;
 import io.kai.seed.ISeedProvider;
 import io.kai.seed.SyntheticSeedProvider;
 import picocli.CommandLine;
@@ -66,6 +64,12 @@ public class CLI implements Callable<Integer> {
     @Option(names = "-kotlinc", description = "Path to kotlinc binary", required = true)
     Path kotlincPath;
 
+    @Option(names = "-destab", description = "Enable destabilization pass", defaultValue = "true")
+    boolean enableDestabilizers;
+
+    @Option(names = {"-v", "--verbose"}, description = "Enable verbose debug output")
+    private boolean verbose = false;
+
     public static void main(String[] args) {
         int exit = new CommandLine(new CLI()).execute(args);
         System.exit(exit);
@@ -73,6 +77,7 @@ public class CLI implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
+        FuzzerRuntime.setVerbose(verbose);
         MutationStats stats = new MutationStats();
         Random rng = new Random();
 
@@ -100,7 +105,17 @@ public class CLI implements Callable<Integer> {
         System.out.println("[Kai] kotlinc: " + kotlincPath);
         System.out.println("[Kai] Artifacts: " + logDir);
 
-        new FuzzerEngine(ctx, maxIterations).run();
+        DestabilizerRunner destabRunner = null;
+
+        if (enableDestabilizers) {
+            destabRunner = new DestabilizerRunner(
+                    FuzzerRuntime.get().destabilizers(),
+                    runner, oracle, minimizer, store, new FindingDeduplicator()
+            );
+            System.out.println("[Kai] Destabilizers: "
+                    + FuzzerRuntime.get().destabilizers().size() + " loaded");
+        }
+        new FuzzerEngine(ctx, maxIterations, destabRunner).run();
         return 0;
     }
 }

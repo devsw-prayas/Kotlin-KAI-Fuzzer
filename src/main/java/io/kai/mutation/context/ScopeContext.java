@@ -10,15 +10,18 @@ public class ScopeContext {
     private final ValueScope valueScope;
     private final SymbolTable symbols;
     private final ScopeContext parent;
+    private final boolean isolated;
 
     public ScopeContext(ScopeContext parent) {
+        this(parent, false);
+    }
+
+    public ScopeContext(ScopeContext parent, boolean isolated) {
         this.typeScope = new TypeScope();
         this.valueScope = new ValueScope();
         this.parent = parent;
-        // SymbolTable is shared across all scope levels
+        this.isolated = isolated;
         this.symbols = parent == null ? new SymbolTable() : parent.symbols;
-
-        // Root scope pre-populates primitives
         if (parent == null) {
             typeScope.declare("Int");
             typeScope.declare("String");
@@ -27,9 +30,8 @@ public class ScopeContext {
         }
     }
 
-    public ScopeContext enter() {
-        return new ScopeContext(this);
-    }
+    public ScopeContext enter() { return new ScopeContext(this, false); }
+    public ScopeContext enterIsolated() { return new ScopeContext(this, true); }
 
     public ScopeContext exit() {
         return parent;
@@ -38,7 +40,7 @@ public class ScopeContext {
     // Walks chain to root, collects all type params
     public List<String> getTypeParams() {
         List<String> result = new ArrayList<>(typeScope.getParams());
-        if (parent != null) result.addAll(parent.getTypeParams());
+        if (parent != null && !isolated) result.addAll(parent.getTypeParams());
         return result;
     }
 

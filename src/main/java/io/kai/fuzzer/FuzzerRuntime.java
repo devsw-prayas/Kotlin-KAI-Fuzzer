@@ -1,12 +1,11 @@
 package io.kai.fuzzer;
 
-import io.kai.builders.BranchBuilder;
-import io.kai.builders.ClassBuilder;
-import io.kai.builders.FunctionBuilder;
-import io.kai.builders.LoopBuilder;
+import io.kai.builders.*;
 import io.kai.builders.expressions.*;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.NameRegistry;
+import io.kai.destabilizer.IDestabilizer;
+import io.kai.destabilizer.destabilizers.*;
 import io.kai.mutation.IMutationPolicy;
 import io.kai.mutation.MutationRegistry;
 import io.kai.mutation.mutators.*;
@@ -19,6 +18,9 @@ public final class FuzzerRuntime {
     private final Map<String, Double> mutationNastiness;
     private final MutationRegistry registry;
     private static final FuzzerRuntime INSTANCE = new FuzzerRuntime();
+    private final List<IDestabilizer> destabilizers = new ArrayList<>();
+    private final List<String> globalFlags;
+    private boolean verbose = false;
 
     private void initPolicies() {
         // MVP-1
@@ -62,6 +64,12 @@ public final class FuzzerRuntime {
         reifiedInline.setInline(true);
         reifiedInline.addBoundedTypeParam("T", "reified");
         prototypeWeights.put(reifiedInline, 0.95);
+
+        FunctionBuilder suspendInlineReified = new FunctionBuilder(dummy);
+        suspendInlineReified.setSuspend(true);
+        suspendInlineReified.setInline(true);
+        suspendInlineReified.addBoundedTypeParam("T", "reified");
+        prototypeWeights.put(suspendInlineReified, 0.93);
 
         FunctionBuilder suspendGeneric = new FunctionBuilder(dummy);
         suspendGeneric.setSuspend(true);
@@ -114,7 +122,46 @@ public final class FuzzerRuntime {
         ClassBuilder plainClass = new ClassBuilder(dummy);
         prototypeWeights.put(plainClass, 0.60);
 
-        // Other builders — class match only, no flags
+        // Lower than ClassBuilder sealed — SealedClassBuilder is the container,
+        // mutation targets are its members and the functions that use it
+        prototypeWeights.put(new SealedClassBuilder(dummy), 0.62);
+
+        // Interesting target — AddWhenOnSealedMutation fires on functions,
+        // but WhenBuilder itself can receive branch additions
+        prototypeWeights.put(new WhenBuilder(dummy, new NullLiteralBuilder(dummy)), 0.58);
+
+        // Moderate interest — catch clause is an injection point for reified catch
+        prototypeWeights.put(new TryCatchBuilder(dummy), 0.50);
+
+        // High interest — destabilizers inject into extension functions
+        // and construction mutations can build on them
+        prototypeWeights.put(new ExtensionFunctionBuilder(dummy, "Any"), 0.72);
+
+        // Low-moderate — type alias expansion is a stress point but
+        // mutations don't directly target it often
+        prototypeWeights.put(new TypeAliasBuilder(dummy, "Alias", "Any"), 0.40);
+
+        // Low — raw statements are injection artifacts, not mutation targets
+        prototypeWeights.put(new RawStatementBuilder(dummy, ""), 0.20);
+
+        // VariableBuilder — very common, moderate interest
+        prototypeWeights.put(new VariableBuilder(dummy, false,
+                new NullLiteralBuilder(dummy), false, "Int"), 0.35);
+
+        // Null safety expression builders — low interest, leaf nodes
+        prototypeWeights.put(new ElvisBuilder(dummy,
+                new NullLiteralBuilder(dummy), new NullLiteralBuilder(dummy)), 0.20);
+        prototypeWeights.put(new SafeCallBuilder(dummy,
+                new NullLiteralBuilder(dummy), "member"), 0.20);
+
+        // FunctionCallBuilder — moderate, scope-aware call emission
+        prototypeWeights.put(new FunctionCallBuilder(dummy, "fun_0"), 0.25);
+
+        // UnaryOpBuilder — low, simple expression wrapper
+        prototypeWeights.put(new UnaryOpBuilder(dummy, "-",
+                new NullLiteralBuilder(dummy)), 0.18);
+
+        // Other builders
         prototypeWeights.put(new LambdaBuilder(dummy), 0.68);
         prototypeWeights.put(new BranchBuilder(dummy, new NullLiteralBuilder(dummy),
                 List.of(), List.of()), 0.45);
@@ -191,6 +238,8 @@ public final class FuzzerRuntime {
         initBuilderWeights();
         initMutationNastiness();
         initRegistry();
+        initDestabilizers();
+        globalFlags = collectAllFlags();
     }
 
     public static FuzzerRuntime get() {
@@ -233,4 +282,33 @@ public final class FuzzerRuntime {
     public List<IMutationPolicy> policies() {
         return policies;
     }
+
+    private void initDestabilizers() {
+        destabilizers.add(new ExplicitBackingFieldSuspendDestabilizer());
+        destabilizers.add(new ContractHoldsInDestabilizer());
+        destabilizers.add(new ExplicitBackingFieldContractDestabilizer());
+        destabilizers.add(new ReifiedCatchSuspendDestabilizer());
+        destabilizers.add(new ReifiedCatchStormDestabilizer());
+        destabilizers.add(new DataFlowExhaustivenessReifiedDestabilizer());
+        destabilizers.add(new ContextSensitiveContractDestabilizer());
+        destabilizers.add(new ExplicitBackingFieldReifiedCatchDestabilizer());
+        destabilizers.add(new DataFlowContractExhaustivenessDestabilizer());
+    }
+
+    public List<IDestabilizer> destabilizers() {
+        return destabilizers;
+    }
+
+    private List<String> collectAllFlags() {
+        Set<String> flags = new LinkedHashSet<>();
+        policies.forEach(p -> flags.addAll(p.requiredFlags()));
+        destabilizers.forEach(d -> flags.addAll(d.requiredFlags()));
+        System.out.println("[Kai] Global compiler flags: " + flags);
+        return List.copyOf(flags);
+    }
+
+    public List<String> globalFlags() { return globalFlags; }
+
+    public static void setVerbose(boolean v) { INSTANCE.verbose = v; }
+    public static boolean isVerbose() { return INSTANCE.verbose; }
 }

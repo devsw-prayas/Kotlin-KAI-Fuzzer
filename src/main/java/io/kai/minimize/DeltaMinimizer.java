@@ -4,6 +4,7 @@ import io.kai.compiler.CompilerRunner;
 import io.kai.compiler.IOracle;
 import io.kai.compiler.OracleVerdict;
 import io.kai.contracts.IBuilder;
+import io.kai.fuzzer.FuzzerRuntime;
 
 public class DeltaMinimizer implements IMinimizer {
 
@@ -19,7 +20,8 @@ public class DeltaMinimizer implements IMinimizer {
                 IBuilder candidate = current.withoutChild(child);
                 try {
                     var result = runner.compile(
-                            candidate.build(0), null);
+                            candidate.build(0), null,
+                            FuzzerRuntime.get().globalFlags());
                     if (oracle.evaluate(result) instanceof OracleVerdict.Finding) {
                         current = candidate;
                         changed = true;

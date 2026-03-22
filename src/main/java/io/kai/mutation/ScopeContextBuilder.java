@@ -1,8 +1,6 @@
 package io.kai.mutation;
 
-import io.kai.builders.ClassBuilder;
-import io.kai.builders.FunctionBuilder;
-import io.kai.builders.VariableBuilder;
+import io.kai.builders.*;
 import io.kai.builders.expressions.LambdaBuilder;
 import io.kai.contracts.IBuilder;
 
@@ -22,7 +20,12 @@ public class ScopeContextBuilder {
     private static boolean walk(IBuilder node, String targetId,
                                 ScopeContext current, ScopeContext[] result) {
         // Determine if this node introduces a new scope level FIRST
-        ScopeContext next = introducesScope(node) ? current.enter() : current;
+        ScopeContext next;
+        if (node instanceof ObjectBuilder ob && ob.isCompanion()) {
+            next = current.enterIsolated();
+        } else {
+            next = introducesScope(node) ? current.enter() : current;
+        }
 
         // Variables: walk children BEFORE registering
         // prevents self-reference (var_5 referencing var_5 in its own initializer)
@@ -84,12 +87,25 @@ public class ScopeContextBuilder {
             for (String tp : cb.getTypeParams().keySet()) {
                 next.typeScope().declare(tp);
             }
+        } else if (node instanceof SealedClassBuilder scb) {
+            // Register the sealed class itself
+            current.symbols().declareClass(new SymbolTable.ClassMeta(
+                    scb.id(), new LinkedHashMap<>(), true, false, false, false, false, null));
+            // Register subclasses with qualified names — sealed_0.class_0
+            for (ClassBuilder sub : scb.getSubclasses()) {
+                current.symbols().declareClass(new SymbolTable.ClassMeta(
+                        scb.id() + "." + sub.id(),
+                        new LinkedHashMap<>(sub.getTypeParams()),
+                        false, false, false, false, false, sub));
+            }
         }
     }
 
     private static boolean introducesScope(IBuilder node) {
         return node instanceof FunctionBuilder
                 || node instanceof ClassBuilder
-                || node instanceof LambdaBuilder;
+                || node instanceof LambdaBuilder
+                || node instanceof ObjectBuilder
+                || node instanceof TryCatchBuilder;
     }
 }

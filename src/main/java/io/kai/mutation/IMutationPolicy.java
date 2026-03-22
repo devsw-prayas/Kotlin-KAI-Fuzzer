@@ -2,6 +2,8 @@ package io.kai.mutation;
 
 import io.kai.contracts.IBuilder;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 public interface IMutationPolicy {
@@ -9,4 +11,8 @@ public interface IMutationPolicy {
     String id();
     boolean compatibleWith(IBuilder builder);
     IBuilder apply(IBuilder builder, MutationContext ctx);
+
+    default List<String> requiredFlags(){
+        return List.of();
+    }
 }

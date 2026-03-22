@@ -4,10 +4,11 @@ import io.kai.contracts.*;
 import io.kai.contracts.capability.*;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
-        ILocalScopeBuilder, IContainer<ILocalScopeBuilder>, IGeneric {
+        ILocalScopeBuilder, IContainer<ILocalScopeBuilder>, IGeneric, IFirstStatement {
 
     private final List<ILocalScopeBuilder> builders;
     private final String id;
@@ -19,6 +20,8 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     private final List<Parameter> parameters;
     private String returnType;
     private String operatorName = null;
+    private final List<String> annotations = new ArrayList<>();
+    private Supplier<String> firstStatement = null;
 
     private FunctionBuilder(List<ILocalScopeBuilder> builders, NameRegistry registry,
                             String id, Map<String, String> typeParams,
@@ -47,15 +50,25 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     @Override
     public String build(int indentLevel) {
         String indent = indent(indentLevel);
-        String body = builders.stream()
+        StringBuilder bodyBuilder = new StringBuilder();
+        if (firstStatement != null) {
+            bodyBuilder.append(indent(indentLevel + 1))
+                    .append(firstStatement.get()).append("\n");
+        }
+        bodyBuilder.append(builders.stream()
                 .map(child -> indent(indentLevel + 1) + child.build(indentLevel + 1))
-                .collect(Collectors.joining("\n"));
+                .collect(Collectors.joining("\n")));
+        String body = bodyBuilder.toString();
 
         String paramsStr = parameters.stream()
                 .map(this::emitParam)
                 .collect(Collectors.joining(", "));
 
-        StringBuilder prefix = new StringBuilder(indent);
+        StringBuilder prefix = new StringBuilder();
+        for (String ann : annotations) {
+            prefix.append(indent).append(ann).append("\n");
+        }
+        prefix.append(indent);
         if (isSuspend) prefix.append("suspend ");
         if (isInline) prefix.append("inline ");
         if (isOperator) prefix.append("operator ");
@@ -98,9 +111,12 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
     public IBuilder withoutChild(IBuilder builder) {
         ArrayList<ILocalScopeBuilder> list = new ArrayList<>(builders);
         list.remove(builder);
-        return new FunctionBuilder(list, registry, id,
+        FunctionBuilder copy = new FunctionBuilder(list, registry, id,
                 new LinkedHashMap<>(typeParams), isInline, isSuspend, isOperator,
                 new ArrayList<>(parameters), returnType, operatorName);
+        annotations.forEach(copy::addAnnotation);
+        copy.setFirstStatementLazy(firstStatement);
+        return copy;
     }
 
     @Override
@@ -168,4 +184,29 @@ public class FunctionBuilder implements ITopLevelBuilder, IMemberBuilder,
         operatorName = name;
     }
     public String getOperatorName() {return operatorName;}
+
+    public void addAnnotation(String raw) {
+        if (raw != null && !annotations.contains(raw)) annotations.add(raw);
+    }
+
+    public List<String> getAnnotations() { return annotations; }
+    public List<ILocalScopeBuilder> getBody() { return builders; }
+
+    @Override
+    public void setFirstStatement(String stmt) {
+        this.firstStatement = stmt == null ? null : () -> stmt;
+    }
+
+    @Override
+    public void setFirstStatementLazy(Supplier<String> stmt) {
+        this.firstStatement = stmt;
+    }
+
+    @Override
+    public String getFirstStatement() {
+        return firstStatement == null ? null : firstStatement.get();
+    }
+
+    @Override
+    public boolean hasFirstStatement() { return firstStatement != null; }
 }
