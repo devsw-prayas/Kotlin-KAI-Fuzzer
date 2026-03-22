@@ -77,9 +77,10 @@ public class ReifiedCatchStormDestabilizer implements IDestabilizer {
                     false, "Class<" + T + ">"));
         }
 
-        if (!existing.contains("(42 is " + T + ")")) {
+        if (!existing.contains("_any_" + T)) {
             fn.addChild(new VariableBuilder(reg, false,
-                    new IntLiteralBuilder(reg, "(42 is " + T + ")"),
+                    new IntLiteralBuilder(reg,
+                            "run { val _any_" + T + ": Any = 42; _any_" + T + " is " + T + " }"),
                     false, "Boolean"));
         }
 

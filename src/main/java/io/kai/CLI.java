@@ -5,7 +5,6 @@ import io.kai.artifact.FindingDeduplicator;
 import io.kai.compiler.CompilerRunner;
 import io.kai.compiler.IOracle;
 import io.kai.compiler.coverage.ICoverageCollector;
-import io.kai.compiler.coverage.NoOpCoverageCollector;
 import io.kai.compiler.coverage.SimpleCoverageCollector;
 import io.kai.compiler.oracles.CompositeOracle;
 import io.kai.compiler.oracles.CrashOracle;
@@ -21,13 +20,10 @@ import io.kai.llm.ILLMProvider;
 import io.kai.llm.NoOpLLMProvider;
 import io.kai.minimize.DeltaMinimizer;
 import io.kai.minimize.IMinimizer;
-import io.kai.minimize.NoOpMinimizer;
-import io.kai.mutation.MutationRegistry;
 import io.kai.mutation.MutationStats;
 import io.kai.mutation.chain.MutationChainBuilder;
 import io.kai.scheduler.CentroidWeightedScheduler;
 import io.kai.scheduler.IScheduler;
-import io.kai.scheduler.RandomScheduler;
 import io.kai.seed.ISeedProvider;
 import io.kai.seed.SyntheticSeedProvider;
 import picocli.CommandLine;
@@ -69,7 +65,10 @@ public class CLI implements Callable<Integer> {
     Path kotlincPath;
 
     @Option(names = "-destab", description = "Enable destabilization pass", defaultValue = "true")
-    boolean enableDestab;
+    boolean enableDestabilizers;
+
+    @Option(names = {"-v", "--verbose"}, description = "Enable verbose debug output")
+    private boolean verbose = false;
 
     public static void main(String[] args) {
         int exit = new CommandLine(new CLI()).execute(args);
@@ -78,6 +77,7 @@ public class CLI implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
+        FuzzerRuntime.setVerbose(verbose);
         MutationStats stats = new MutationStats();
         Random rng = new Random();
 
@@ -107,7 +107,7 @@ public class CLI implements Callable<Integer> {
 
         DestabilizerRunner destabRunner = null;
 
-        if (enableDestab) {
+        if (enableDestabilizers) {
             destabRunner = new DestabilizerRunner(
                     FuzzerRuntime.get().destabilizers(),
                     runner, oracle, minimizer, store, new FindingDeduplicator()

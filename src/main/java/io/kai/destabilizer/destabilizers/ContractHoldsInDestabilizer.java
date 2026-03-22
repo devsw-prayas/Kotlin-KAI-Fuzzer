@@ -2,12 +2,9 @@ package io.kai.destabilizer.destabilizers;
 
 import io.kai.builders.FunctionBuilder;
 import io.kai.builders.RawStatementBuilder;
-import io.kai.builders.VariableBuilder;
-import io.kai.builders.expressions.IntLiteralBuilder;
 import io.kai.contracts.IBuilder;
 import io.kai.contracts.Parameter;
 import io.kai.contracts.NameRegistry;
-import io.kai.contracts.capability.ILocalScopeBuilder;
 import io.kai.destabilizer.DestabilizerTreeWalker;
 import io.kai.destabilizer.IDestabilizer;
 

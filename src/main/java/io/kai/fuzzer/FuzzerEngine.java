@@ -11,6 +11,7 @@ import io.kai.mutation.chain.MutationChain;
 import io.kai.mutation.chain.MutationChainLog;
 import io.kai.compiler.CompilerResult;
 import io.kai.compiler.OracleVerdict;
+import io.kai.mutation.chain.MutationStep;
 import io.kai.mutation.context.ScopeContext;
 
 import java.nio.file.Files;
@@ -93,29 +94,55 @@ public class FuzzerEngine {
                 );
                 MutationChain chain = ctx.builder().build(seed, mutCtx);
 
-                System.out.println("[Chain] steps=" + chain.steps().size() + " seed=" + seed.id());
+                // Verbose output
+                if (FuzzerRuntime.isVerbose()) {
+                    StringBuilder sb = new StringBuilder("[Chain] seed=")
+                            .append(seed.id()).append(" steps=").append(chain.steps().size()).append("\n");
+                    for (int i = 0; i < chain.steps().size(); i++) {
+                        MutationStep step = chain.steps().get(i);
+                        sb.append("  step ").append(i + 1).append(": ")
+                                .append(step.policyID())
+                                .append(" → node(").append(step.nodeID()).append(")");
+                        if (i < chain.steps().size() - 1) sb.append("\n");
+                    }
+                    System.out.println(sb);
+                }
 
                 // 4. Apply chain → emit source
-                IBuilder mutated = chain.applyTo(seed, ctx.mutationRegistry(), mutCtx);
-                String source = mutated.build(0);
+                IBuilder mutated;
+                String source;
+
+                // Keep it synchronized, destabilizer will be pulling the entry as well
+                synchronized (seed) {
+                    mutated = chain.applyTo(seed, ctx.mutationRegistry(), mutCtx);
+                    source = mutated.build(0);
+                }
+
+                // Output
+                if (FuzzerRuntime.isVerbose()) {
+                    try {
+                        Files.createDirectories(Path.of("./debug"));
+                        Files.writeString(Path.of("./debug/program_" + System.nanoTime() + ".kt"), source);
+                    } catch (Exception ignored) {}
+                }
+
                 MutationChainLog chainLog = new MutationChainLog(
                         seed.id(), rngSeed,
                         mutCtx.registry().snapshot(),
                         chain, System.currentTimeMillis()
                 );
 
-                Files.writeString(Path.of("./debug/program_" + System.nanoTime() + ".kt"), source);
-
                 // 5. Compile
                 CompilerResult result = ctx.runner().compile(source, chainLog,
                         FuzzerRuntime.get().globalFlags());
-                // TEMP DEBUG
-                System.out.println("[DEBUG] exit=" + result.exitCode()
-                        + " timedOut=" + result.timedOut()
-                        + " duration=" + result.durationMs() + "ms"
-                        + " stderrLen=" + result.stderr().length());
-                if (!result.stderr().isBlank()) {
-                    System.out.println("[STDERR]\n" + result.stderr());
+
+                // Verbose output for compilation
+                if (FuzzerRuntime.isVerbose()) {
+                    System.out.println("[Compile] exit=" + result.exitCode()
+                            + " duration=" + result.durationMs() + "ms"
+                            + " stderr=" + result.stderr().length() + "b");
+                    if (!result.stderr().isBlank())
+                        System.out.println("[STDERR]\n" + result.stderr());
                 }
 
                 // 6. Collect coverage

@@ -87,6 +87,17 @@ public class ScopeContextBuilder {
             for (String tp : cb.getTypeParams().keySet()) {
                 next.typeScope().declare(tp);
             }
+        } else if (node instanceof SealedClassBuilder scb) {
+            // Register the sealed class itself
+            current.symbols().declareClass(new SymbolTable.ClassMeta(
+                    scb.id(), new LinkedHashMap<>(), true, false, false, false, false, null));
+            // Register subclasses with qualified names — sealed_0.class_0
+            for (ClassBuilder sub : scb.getSubclasses()) {
+                current.symbols().declareClass(new SymbolTable.ClassMeta(
+                        scb.id() + "." + sub.id(),
+                        new LinkedHashMap<>(sub.getTypeParams()),
+                        false, false, false, false, false, sub));
+            }
         }
     }
 

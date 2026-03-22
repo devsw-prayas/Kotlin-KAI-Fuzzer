@@ -1,6 +1,7 @@
 package io.kai.compiler;
 
 import io.kai.compiler.coverage.ICoverageCollector;
+import io.kai.fuzzer.FuzzerRuntime;
 import io.kai.mutation.chain.MutationChainLog;
 
 import java.io.IOException;
@@ -33,12 +34,15 @@ public class CompilerRunner {
         cmd.add(kotlincPath.toString());
         cmd.addAll(extraFlags);
         cmd.add(tmpFile.toString());
+
+        if (FuzzerRuntime.isVerbose())
+            System.out.println("[CMD] " + cmd);
+
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(false);
         coverageCollector.attach(pb);
 
         long start = System.currentTimeMillis();
-        System.out.println("[CMD] " + cmd);
         Process process = pb.start();
 
         // Drain streams in parallel — prevents pipe buffer blocking

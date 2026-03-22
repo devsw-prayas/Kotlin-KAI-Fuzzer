@@ -50,15 +50,22 @@ public class DestabilizerRunner {
 
         // Pick a random applicable destabilizer
         IDestabilizer chosen = applicable.get(rng.nextInt(applicable.size()));
+        String source;
 
-        // Apply in-place — destabilize mutates the tree directly
-        // The caller is responsible for passing a copy if needed
-        chosen.destabilize(program, rng);
+        if (FuzzerRuntime.isVerbose())
+            System.out.println("[Destabilizer] " + chosen.id()
+                    + " (" + applicable.size() + " applicable)");
 
-        // Emit and compile
-        String source = program.build(0);
+        // Keep it synchronized, the crawler is mutating parallelly
+        synchronized (program) {
+            // Apply in-place — destabilize mutates the tree directly
+            // The caller is responsible for passing a copy if needed
+            chosen.destabilize(program, rng);
+
+            // Emit and compile
+            source = program.build(0);
+        }
         try {
-            System.out.println("[DESTAB] chosen=" + chosen.id() + " flags=" + chosen.requiredFlags());
             CompilerResult result = compiler.compile(source, null,
                     FuzzerRuntime.get().globalFlags());
             OracleVerdict verdict = oracle.evaluate(result);
@@ -74,7 +81,10 @@ public class DestabilizerRunner {
                     System.out.println("[DESTABILIZER] " + chosen.id() + " → duplicate finding");
                 }
             } else {
-                System.out.println("[DESTABILIZER] " + chosen.id() + " → clean");
+                if (FuzzerRuntime.isVerbose())
+                    System.out.println("[DESTABILIZER] " + chosen.id()
+                            + " → clean exit=" + result.exitCode()
+                            + " duration=" + result.durationMs() + "ms");
             }
         } catch (Exception e) {
             System.err.println("[DESTABILIZER] compile error: " + e.getMessage());
